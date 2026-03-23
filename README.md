@@ -19,6 +19,20 @@
 - audit log: `workflow/audit_log.jsonl`
 - 정적 dashboard UI: 프로젝트 홈, approval queue, chapter detail, artifact viewer, diff viewer
 
+## 추가 문서
+
+- `docs/README.md`: 문서 인덱스
+- `docs/getting_started.md`: 빠른 시작
+- `docs/architecture.md`: 아키텍처 개요
+- `docs/backend.md`: backend 서비스 구조
+- `docs/frontend.md`: dashboard UI 구조
+- `docs/operations.md`: 운영 가이드
+- `docs/assistant_guide.md`: 코드 어시스턴트용 변경 가이드
+- `specs/system_spec.md`: 시스템 전체 계약
+- `specs/state_machine.md`: 장 상태 전이 명세
+- `specs/api_contract.md`: API 계약
+- `specs/repository_layout.md`: 파일/디렉터리 명세
+
 ## 설치
 
 ```bash
