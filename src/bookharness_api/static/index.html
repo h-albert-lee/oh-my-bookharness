@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bookharness dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <h1>bookharness</h1>
+        <button id="nav-dashboard" class="nav-button active">Dashboard</button>
+        <button id="nav-approval" class="nav-button">Approvals</button>
+        <button id="nav-create" class="nav-button">Create Chapter</button>
+        <div class="sidebar-note">
+          <p>CLI 엔진 위에 얹힌 approval-centric UI입니다.</p>
+        </div>
+      </aside>
+      <main class="content">
+        <section id="view-dashboard" class="view active">
+          <header class="page-header">
+            <div>
+              <h2>프로젝트 대시보드</h2>
+              <p id="project-title" class="subtle"></p>
+            </div>
+            <button id="refresh-dashboard" class="primary">새로고침</button>
+          </header>
+          <div id="metrics" class="metrics-grid"></div>
+          <div class="panel-grid">
+            <section class="panel">
+              <h3>장 목록</h3>
+              <table>
+                <thead>
+                  <tr><th>Chapter</th><th>Status</th><th>Draft</th><th></th></tr>
+                </thead>
+                <tbody id="chapter-table"></tbody>
+              </table>
+            </section>
+            <section class="panel">
+              <h3>승인 대기</h3>
+              <div id="pending-approvals"></div>
+            </section>
+          </div>
+          <section class="panel">
+            <h3>최근 실행 Job</h3>
+            <div id="recent-runs"></div>
+          </section>
+        </section>
+
+        <section id="view-approvals" class="view">
+          <header class="page-header">
+            <div>
+              <h2>Approval Queue</h2>
+              <p class="subtle">Approval A/B 대기 항목을 처리합니다.</p>
+            </div>
+            <button id="refresh-approvals" class="primary">새로고침</button>
+          </header>
+          <div id="approval-queue"></div>
+        </section>
+
+        <section id="view-create" class="view">
+          <header class="page-header">
+            <div>
+              <h2>새 장 생성</h2>
+              <p class="subtle">초기 장 상태를 생성합니다.</p>
+            </div>
+          </header>
+          <form id="create-chapter-form" class="panel form-panel">
+            <label>Chapter ID<input name="chapter_id" placeholder="ch01" required /></label>
+            <label>Title<input name="title" placeholder="데모는 되는데 왜 운영은 어려울까" required /></label>
+            <label>Dependencies<input name="dependencies" placeholder="ch00_blueprint, system_vs_model" /></label>
+            <label>Actor<input name="actor" placeholder="editor" value="editor" /></label>
+            <button type="submit" class="primary">장 생성</button>
+          </form>
+        </section>
+
+        <section id="view-chapter" class="view">
+          <header class="page-header sticky">
+            <div>
+              <h2 id="chapter-heading">장 상세</h2>
+              <p id="chapter-meta" class="subtle"></p>
+            </div>
+            <div class="button-row">
+              <button id="back-dashboard">대시보드로</button>
+              <button id="refresh-chapter" class="primary">새로고침</button>
+            </div>
+          </header>
+
+          <div class="panel">
+            <h3>Workflow Actions</h3>
+            <div class="button-row wrap" id="stage-actions"></div>
+          </div>
+
+          <div class="panel-grid two-equal">
+            <section class="panel">
+              <h3>Artifacts</h3>
+              <div id="artifact-list"></div>
+            </section>
+            <section class="panel">
+              <h3>Approval</h3>
+              <form id="approval-form" class="form-panel compact">
+                <label>Approval Key
+                  <select name="approval_key">
+                    <option value="approval_a">approval_a</option>
+                    <option value="approval_b">approval_b</option>
+                  </select>
+                </label>
+                <label>Result
+                  <select name="result">
+                    <option value="approved">approved</option>
+                    <option value="approved_with_notes">approved_with_notes</option>
+                    <option value="revision_requested">revision_requested</option>
+                    <option value="rejected">rejected</option>
+                  </select>
+                </label>
+                <label>Actor<input name="actor" value="editor_in_chief" /></label>
+                <label>Notes<textarea name="notes" rows="4" placeholder="한 줄에 하나씩 입력"></textarea></label>
+                <button type="submit" class="primary">승인 제출</button>
+              </form>
+            </section>
+          </div>
+
+          <div class="panel-grid two-equal">
+            <section class="panel">
+              <h3>Draft / Artifact Viewer</h3>
+              <div class="viewer-toolbar">
+                <button id="toggle-render" class="secondary">Rendered / Raw</button>
+              </div>
+              <div id="artifact-viewer" class="artifact-viewer"></div>
+            </section>
+            <section class="panel">
+              <h3>Diff Viewer</h3>
+              <div class="form-inline">
+                <select id="diff-left"></select>
+                <select id="diff-right"></select>
+                <button id="load-diff" class="secondary">Diff 보기</button>
+              </div>
+              <div id="diff-viewer" class="artifact-viewer"></div>
+            </section>
+          </div>
+
+          <div class="panel-grid">
+            <section class="panel">
+              <h3>Review Reports</h3>
+              <div id="review-cards"></div>
+            </section>
+            <section class="panel">
+              <h3>Recent Chapter Jobs / Audit</h3>
+              <div id="chapter-runs"></div>
+              <hr />
+              <div id="chapter-audit"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
