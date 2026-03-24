@@ -30,3 +30,8 @@ REQUIRED_BOOK_DOCS = [
     "book/chapter_dependencies.yaml",
     "book/decisions_log.md",
 ]
+
+OPTIONAL_BOOK_DOCS = [
+    "book/audience_profile.md",
+    "book/writing_rules.md",
+]

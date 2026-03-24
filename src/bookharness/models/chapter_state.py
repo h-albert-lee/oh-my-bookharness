@@ -23,6 +23,8 @@ class ChapterState:
     review_reports: list[str] = field(default_factory=list)
     revision_plan: str | None = None
     human_feedback: list[dict[str, Any]] = field(default_factory=list)
+    gate_passed: bool | None = None
+    gate_details: dict[str, Any] | None = None
     open_issues: list[str] = field(default_factory=list)
     dependencies: list[str] = field(default_factory=list)
     artifacts: dict[str, str] = field(default_factory=dict)
@@ -35,4 +37,8 @@ class ChapterState:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "ChapterState":
-        return cls(**payload)
+        import dataclasses
+
+        valid_fields = {f.name for f in dataclasses.fields(cls)}
+        filtered = {k: v for k, v in payload.items() if k in valid_fields}
+        return cls(**filtered)

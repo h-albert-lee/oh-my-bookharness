@@ -6,7 +6,7 @@ from typing import Any
 
 from bookharness.memory.loader import MemoryLoader
 from bookharness.orchestrator.state_manager import StateManager
-from bookharness.utils.io import read_text
+from bookharness.utils.io import read_json, read_text
 from bookharness.utils.yaml_utils import load_yaml
 
 
@@ -147,7 +147,7 @@ class MetadataIndex:
         runs_dir = self.root / "workflow/runs"
         with self._connect() as conn:
             for path in sorted(runs_dir.glob("*.json")):
-                payload = load_yaml(path) or {}
+                payload = read_json(path) if path.exists() else {}
                 conn.execute(
                     """
                     INSERT OR REPLACE INTO workflow_runs(job_id, chapter_id, job_type, status, actor, created_at, started_at, finished_at, error)
@@ -188,19 +188,16 @@ class MetadataIndex:
             conn.commit()
 
     def list_chapters(self) -> list[dict[str, Any]]:
-        self.sync_all()
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM chapters ORDER BY chapter_id").fetchall()
             return [dict(row) for row in rows]
 
     def list_runs(self, limit: int = 20) -> list[dict[str, Any]]:
-        self.sync_all()
         with self._connect() as conn:
             rows = conn.execute("SELECT * FROM workflow_runs ORDER BY created_at DESC LIMIT ?", (limit,)).fetchall()
             return [dict(row) for row in rows]
 
     def list_pending_approvals(self) -> list[dict[str, Any]]:
-        self.sync_all()
         with self._connect() as conn:
             rows = conn.execute(
                 """

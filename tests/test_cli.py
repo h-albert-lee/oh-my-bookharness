@@ -13,7 +13,7 @@ def run_cli(tmp_path: Path, *args: str) -> subprocess.CompletedProcess[str]:
         capture_output=True,
         text=True,
         check=True,
-        env={**os.environ, "PYTHONPATH": "src"},
+        env={**os.environ, "PYTHONPATH": "src", "BOOKHARNESS_MOCK": "1"},
     )
 
 
@@ -42,6 +42,42 @@ def test_run_mvp_creates_expected_artifacts(tmp_path: Path) -> None:
     state = json.loads((tmp_path / "workflow/chapter_states/ch01_state.json").read_text(encoding="utf-8"))
     assert state["status"] == "awaiting_human_draft_approval"
     assert state["latest_draft"] == "draft_v2.md"
+
+
+def test_approval_a_advances_state(tmp_path: Path) -> None:
+    run_cli(tmp_path, "init-project")
+    run_cli(tmp_path, "init-chapter", "ch01", "테스트 장")
+    run_cli(tmp_path, "run-stage", "ch01", "brief_generation")
+    run_cli(tmp_path, "run-stage", "ch01", "source_collection")
+    run_cli(tmp_path, "run-stage", "ch01", "source_analysis")
+    run_cli(tmp_path, "run-stage", "ch01", "outline_design")
+    run_cli(tmp_path, "approve", "ch01", "approval_a", "approved")
+
+    state = json.loads((tmp_path / "workflow/chapter_states/ch01_state.json").read_text(encoding="utf-8"))
+    assert state["status"] == "outline_ready"
+    assert state["current_stage"] == "human_approval_a"
+
+
+def test_approval_a_revision_requested_resets_stage(tmp_path: Path) -> None:
+    run_cli(tmp_path, "init-project")
+    run_cli(tmp_path, "init-chapter", "ch01", "테스트 장")
+    run_cli(tmp_path, "run-stage", "ch01", "brief_generation")
+    run_cli(tmp_path, "run-stage", "ch01", "source_collection")
+    run_cli(tmp_path, "run-stage", "ch01", "source_analysis")
+    run_cli(tmp_path, "run-stage", "ch01", "outline_design")
+    run_cli(tmp_path, "approve", "ch01", "approval_a", "revision_requested", "--note", "도입부 수정 필요")
+
+    state = json.loads((tmp_path / "workflow/chapter_states/ch01_state.json").read_text(encoding="utf-8"))
+    assert state["current_stage"] == "outline_design"
+
+
+def test_gate_passed_recorded_in_state(tmp_path: Path) -> None:
+    run_cli(tmp_path, "init-project")
+    run_cli(tmp_path, "run-mvp", "ch01", "테스트 장")
+
+    state = json.loads((tmp_path / "workflow/chapter_states/ch01_state.json").read_text(encoding="utf-8"))
+    assert "gate_passed" in state
+    assert isinstance(state["gate_passed"], bool)
 
 
 def test_approval_b_creates_final_candidate_and_updates_memory(tmp_path: Path) -> None:

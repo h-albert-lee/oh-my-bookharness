@@ -1,0 +1,116 @@
+"""LLM backend abstraction for bookharness agents.
+
+Every agent MUST call the LLM backend. There is no template fallback.
+Tests inject a MockLLMBackend via set_backend().
+
+Configuration:
+- ANTHROPIC_API_KEY: Required for production
+- BOOKHARNESS_MODEL: Model ID (default: claude-sonnet-4-20250514)
+- BOOKHARNESS_MAX_TOKENS: Max output tokens (default: 8192)
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Protocol
+
+
+class LLMBackend(Protocol):
+    """Protocol for LLM backends."""
+
+    def generate(self, system: str, user: str, *, max_tokens: int | None = None) -> str: ...
+
+
+class AnthropicBackend:
+    """Production backend using the Anthropic Claude API."""
+
+    def __init__(
+        self,
+        model: str | None = None,
+        max_tokens: int | None = None,
+        api_key: str | None = None,
+    ) -> None:
+        try:
+            import anthropic
+        except ImportError as exc:
+            raise ImportError(
+                "anthropic package is required. "
+                "Install with: pip install 'bookharness[llm]'"
+            ) from exc
+        self.model = model or os.environ.get("BOOKHARNESS_MODEL", "claude-sonnet-4-20250514")
+        self.default_max_tokens = max_tokens or int(os.environ.get("BOOKHARNESS_MAX_TOKENS", "8192"))
+        self.client = anthropic.Anthropic(api_key=api_key)
+
+    def generate(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=max_tokens or self.default_max_tokens,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+        return response.content[0].text
+
+
+_backend: LLMBackend | None = None
+
+
+class _BuiltinMockBackend:
+    """Minimal built-in mock for CLI testing (activated by BOOKHARNESS_MOCK=1)."""
+
+    def generate(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
+        # Return minimal but parseable content for each agent role
+        if "리뷰" in system or "Reviewer" in system:
+            return '```json\n{"must_fix": [], "should_fix": [], "nice_to_have": [], "score": {"technical_accuracy": 4, "source_grounding": 4, "clarity": 4, "tone_fit": 4, "reader_friendliness": 4, "redundancy": 5, "continuity": 4, "dependency_coverage": 5}}\n```'
+        if "집필자" in system or "Draft Writer" in system:
+            title = "제목 미정"
+            for line in user.splitlines():
+                if "제목:" in line:
+                    title = line.split("제목:", 1)[1].strip()
+                    break
+            return f"# {title}\n\n이 장에서는 핵심 주제를 다룬다.\n\n## 도입\n\n독자에게 이 장의 내용을 안내한다.[^source_1]\n\n## 핵심 개념\n\n주요 개념을 설명한다.\n\n## 정리\n\n다음 장에서는 이 내용을 확장한다.\n"
+        if "장 설계자" in system or "Chapter Architect" in system:
+            return "# Outline\n\n## Section 1. 도입\n\n- 목적: 주제 소개\n\n## Section 2. 핵심 개념\n\n- 목적: 개념 정의\n"
+        if "편집장" in system or "Chief Editor" in system:
+            return "# Chapter Brief\n\n## 이 장의 목표\n\n- 핵심 개념을 설명한다.\n\n## 반드시 들어갈 개념\n\n- workflow state\n"
+        if "수정 통합" in system or "Revision Synth" in system:
+            return "# Revision Plan\n\n## Must Fix\n\n- 없음\n\n## Should Fix\n\n- 용어 확인\n"
+        return "# Generated\n\nContent.\n"
+
+
+def get_backend() -> LLMBackend:
+    """Return the configured LLM backend (singleton).
+
+    Priority:
+    1. Explicitly set backend (via set_backend())
+    2. Built-in mock (if BOOKHARNESS_MOCK=1)
+    3. Anthropic API (if ANTHROPIC_API_KEY is set)
+    4. Raise RuntimeError
+    """
+    global _backend
+    if _backend is not None:
+        return _backend
+    if os.environ.get("BOOKHARNESS_MOCK") == "1":
+        _backend = _BuiltinMockBackend()
+        return _backend
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "No LLM backend configured. "
+            "Set ANTHROPIC_API_KEY for production, "
+            "BOOKHARNESS_MOCK=1 for testing, "
+            "or call set_backend() in code."
+        )
+    _backend = AnthropicBackend()
+    return _backend
+
+
+def set_backend(backend: LLMBackend) -> None:
+    """Override the global LLM backend (for testing or custom backends)."""
+    global _backend
+    _backend = backend
+
+
+def reset_backend() -> None:
+    """Reset the global backend so it will be re-detected on next use."""
+    global _backend
+    _backend = None

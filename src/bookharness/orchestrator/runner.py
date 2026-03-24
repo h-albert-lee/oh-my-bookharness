@@ -11,11 +11,13 @@ from bookharness.agents.revision_synthesizer import RevisionSynthesizerAgent
 from bookharness.agents.source_analyst import SourceAnalystAgent
 from bookharness.agents.style_reviewer import StyleReviewerAgent
 from bookharness.agents.technical_reviewer import TechnicalReviewerAgent
+from bookharness.llm import LLMBackend, get_backend
 from bookharness.memory.loader import MemoryLoader
 from bookharness.memory.summarizer import SummaryBuilder
 from bookharness.models.chapter_state import ChapterState
 from bookharness.orchestrator.state_manager import StateManager
-from bookharness.reviews.evaluator import ReviewEvaluator
+from bookharness.reviews.evaluator import ReviewIO
+from bookharness.reviews.gates import AcceptanceGate
 from bookharness.utils.io import write_text
 from bookharness.utils.yaml_utils import dump_yaml, load_yaml
 
@@ -25,20 +27,22 @@ class ApprovalRequiredError(RuntimeError):
 
 
 class WorkflowRunner:
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, backend: LLMBackend | None = None) -> None:
         self.root = root
+        backend = backend or get_backend()
         self.loader = MemoryLoader(root)
         self.state_manager = StateManager(root)
-        self.chief_editor = ChiefEditorAgent(root)
-        self.librarian = ResearchLibrarianAgent(root)
-        self.analyst = SourceAnalystAgent(root)
-        self.architect = ChapterArchitectAgent(root)
-        self.writer = DraftWriterAgent(root)
-        self.technical = TechnicalReviewerAgent(root)
-        self.style = StyleReviewerAgent(root)
-        self.continuity = ContinuityReviewerAgent(root)
-        self.synthesizer = RevisionSynthesizerAgent(root)
-        self.evaluator = ReviewEvaluator(root)
+        self.chief_editor = ChiefEditorAgent(root, backend)
+        self.librarian = ResearchLibrarianAgent(root, backend)
+        self.analyst = SourceAnalystAgent(root, backend)
+        self.architect = ChapterArchitectAgent(root, backend)
+        self.writer = DraftWriterAgent(root, backend)
+        self.technical = TechnicalReviewerAgent(root, backend)
+        self.style = StyleReviewerAgent(root, backend)
+        self.continuity = ContinuityReviewerAgent(root, backend)
+        self.synthesizer = RevisionSynthesizerAgent(root, backend)
+        self.review_io = ReviewIO(root)
+        self.gate = AcceptanceGate.from_rubrics(root)
         self.summarizer = SummaryBuilder()
 
     def initialize_chapter(self, chapter_id: str, title: str, dependencies: list[str] | None = None) -> ChapterState:
@@ -84,25 +88,28 @@ class WorkflowRunner:
                 self.continuity.review(chapter_id),
             ]
             for report in reports:
-                self.evaluator.write_report(chapter_id, report)
-            state.status = "auto_review_done"
+                self.review_io.write_report(chapter_id, report)
             state.review_reports = [
                 "review_technical_v1.md",
                 "review_style_v1.md",
                 "review_continuity_v1.md",
             ]
+            gate_result = self.gate.evaluate(reports)
+            state.gate_passed = gate_result["passed"]
+            state.gate_details = gate_result
+            state.status = "auto_review_done"
         elif stage == "revision_plan_synthesis":
-            reports = [
-                self.technical.review(chapter_id),
-                self.style.review(chapter_id),
-                self.continuity.review(chapter_id),
-            ]
+            reports = self.review_io.load_reports(chapter_id)
             plan_path = self.synthesizer.synthesize(chapter_id, reports)
             state.status = "revision_ready"
             state.revision_plan = plan_path.name
         elif stage == "draft_revision":
             draft_path = self.writer.write(chapter_id, state.title, revision_mode=True)
-            write_text(self.root / f"manuscript/{chapter_id}/change_log_v2.md", "# Change Log v2\n\n- revision plan을 반영해 draft를 재생성했다.")
+            version = draft_path.stem.replace("draft_v", "")
+            write_text(
+                self.root / f"manuscript/{chapter_id}/change_log_v{version}.md",
+                f"# Change Log v{version}\n\n- revision plan을 반영해 draft를 재생성했다.",
+            )
             state.latest_draft = draft_path.name
             state.draft_versions.append(draft_path.name)
             state.status = "awaiting_human_draft_approval"
@@ -127,18 +134,50 @@ class WorkflowRunner:
             "notes": notes or [],
         }
         dump_yaml(approvals_path, approvals)
-        if approval_key == "approval_b" and result in {"approved", "approved_with_notes"}:
-            final_candidate = self.root / f"manuscript/{chapter_id}/final_candidate.md"
-            latest = self.root / f"manuscript/{chapter_id}/{state.latest_draft}"
-            write_text(final_candidate, latest.read_text(encoding="utf-8"))
-            self.summarizer.write_summary_files(self.root, chapter_id, final_candidate)
-            state.approved = True
-            state.status = "chapter_approved"
-            state.current_stage = "human_approval_b"
+
+        if notes:
+            state.human_feedback.append({
+                "approval_key": approval_key,
+                "result": result,
+                "notes": notes,
+            })
+
+        if approval_key == "approval_a":
+            if result in {"approved", "approved_with_notes"}:
+                state.status = "outline_ready"
+                state.current_stage = "human_approval_a"
+            elif result == "revision_requested":
+                state.status = "outline_ready"
+                state.current_stage = "outline_design"
+            elif result == "rejected":
+                state.status = "brief_generated"
+                state.current_stage = "brief_generation"
+        elif approval_key == "approval_b":
+            if result in {"approved", "approved_with_notes"}:
+                final_candidate = self.root / f"manuscript/{chapter_id}/final_candidate.md"
+                latest = self.root / f"manuscript/{chapter_id}/{state.latest_draft}"
+                write_text(final_candidate, latest.read_text(encoding="utf-8"))
+                self.summarizer.write_summary_files(self.root, chapter_id, final_candidate)
+                state.approved = True
+                state.status = "chapter_approved"
+                state.current_stage = "human_approval_b"
+            elif result == "revision_requested":
+                state.status = "revision_ready"
+                state.current_stage = "revision_plan_synthesis"
+            elif result == "rejected":
+                state.status = "draft_generated"
+                state.current_stage = "draft_writing"
+
         self.state_manager.save(state)
         return state
 
     def run_mvp(self, chapter_id: str, title: str, dependencies: list[str] | None = None) -> ChapterState:
+        """Run the full MVP pipeline for a single chapter.
+
+        Executes stages up to draft_revision, then stops at awaiting_human_draft_approval.
+        The human_approval_a gate is included in run_stage but skipped here for MVP convenience.
+        Use run_full() for the complete pipeline with approval gates.
+        """
         state = self.initialize_chapter(chapter_id, title, dependencies)
         for stage in [
             "brief_generation",
@@ -153,9 +192,51 @@ class WorkflowRunner:
             state = self.run_stage(chapter_id, stage)
         return state
 
+    def run_full(self, chapter_id: str, title: str, dependencies: list[str] | None = None) -> ChapterState:
+        """Run the complete pipeline including approval gates.
+
+        Stops at the first approval gate (human_approval_a).
+        After approval, call resume_after_approval() to continue.
+        """
+        state = self.initialize_chapter(chapter_id, title, dependencies)
+        for stage in [
+            "brief_generation",
+            "source_collection",
+            "source_analysis",
+            "outline_design",
+            "human_approval_a",
+        ]:
+            state = self.run_stage(chapter_id, stage)
+        return state
+
+    def resume_after_approval(self, chapter_id: str) -> ChapterState:
+        """Resume pipeline after an approval gate.
+
+        After approval_a: runs draft_writing through draft_revision, then stops at human_approval_b.
+        After approval_b: chapter is already complete.
+        """
+        state = self.state_manager.load(chapter_id)
+        if state.status == "chapter_approved":
+            return state
+        if state.current_stage == "human_approval_a":
+            for stage in [
+                "draft_writing",
+                "automated_review",
+                "revision_plan_synthesis",
+                "draft_revision",
+                "human_approval_b",
+            ]:
+                state = self.run_stage(chapter_id, stage)
+        return state
+
     def _collect_artifacts(self, chapter_id: str) -> dict[str, str]:
         chapter_dir = self.root / f"manuscript/{chapter_id}"
         artifacts = {}
         for path in sorted(chapter_dir.glob("*.md")):
             artifacts[path.stem] = str(path.relative_to(self.root))
+        pack_dir = self.root / f"sources/chapter_packs/{chapter_id}"
+        if pack_dir.exists():
+            for path in sorted(pack_dir.glob("*")):
+                if path.is_file():
+                    artifacts[f"source_{path.stem}"] = str(path.relative_to(self.root))
         return artifacts

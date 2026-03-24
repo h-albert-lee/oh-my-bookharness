@@ -1,3 +1,9 @@
+"""Draft composition utilities.
+
+The DraftComposer is kept for backward compatibility but the primary
+draft generation now happens in DraftWriterAgent.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,32 +20,37 @@ class DraftComposer:
         chapter_dir = self.root / f"manuscript/{chapter_id}"
         brief = read_text(chapter_dir / "brief.md")
         outline = read_text(chapter_dir / "outline.md")
-        bundle = read_text(self.root / f"sources/chapter_packs/{chapter_id}/notes.md")
+        bundle_path = self.root / f"sources/chapter_packs/{chapter_id}/notes.md"
+        bundle = read_text(bundle_path) if bundle_path.exists() else ""
+
         revision_plan = ""
-        if revision_mode and (chapter_dir / "revision_plan_v1.md").exists():
-            revision_plan = read_text(chapter_dir / "revision_plan_v1.md")
+        if revision_mode:
+            plan_files = sorted(chapter_dir.glob("revision_plan_v*.md"))
+            if plan_files:
+                revision_plan = read_text(plan_files[-1])
+
         path = next_draft_path(chapter_dir)
         body = f"""# {title}
 
-이 장은 독자에게 무엇을 다루는지 먼저 설명하고, 왜 AI 시스템 집필 자동화가 상태 기반 워크플로를 필요로 하는지 단계적으로 안내한다.
+이 장은 독자에게 무엇을 다루는지 먼저 설명하고, 핵심 개념을 단계적으로 안내한다.
 
 ## 문제 설정
 
-초안 생성만으로는 책 전체의 품질을 유지하기 어렵다. 장기 집필에서는 장별 상태, 승인 여부, 참고문헌 묶음, 리뷰 이력이 모두 추적 가능해야 한다. 따라서 이 시스템은 자유로운 대화형 협업보다 재현 가능한 단계 중심 워크플로를 우선한다.
+{self._extract_section_from_brief(brief, "핵심 질문")}
 
-## 상태 기반 워크플로
+## 핵심 개념
 
-각 장은 brief, source collection, source analysis, outline, draft, review, revision, approval 단계를 거친다. 각 단계는 입력 문서와 출력 산출물이 명확해야 하며, 실패 시 해당 단계만 다시 실행할 수 있어야 한다. 인간 승인 게이트는 outline과 revised draft 이후에 명시적으로 배치한다.
+{self._extract_section_from_brief(brief, "반드시 들어갈 개념")}
 
-## 문서 중심 메모리
+## 분석과 사례
 
-긴 문맥을 모델의 암묵적 기억에 맡기지 않고, blueprint, tone guide, argument map, concept dictionary, chapter summaries 같은 canonical 문서를 읽어 작업한다. 승인된 장만 global summary에 반영하고, draft 상태의 내용은 canonical memory로 승격하지 않는다.
+source pack의 근거를 바탕으로 핵심 개념을 분석하고 사례를 제시한다.
 
-## 리뷰와 수정
+## 정리
 
-초안 뒤에는 기술 리뷰, 스타일 리뷰, 연속성 리뷰를 분리해 수행한다. 이후 revision synthesizer가 must-fix와 should-fix를 정리하고, writer는 그 계획에 따라 다음 버전을 만든다. 이렇게 하면 생성보다 리뷰와 승인 구조가 더 엄격한 편집 시스템을 구현할 수 있다.
+이 장에서 다룬 핵심 메시지를 정리하고 다음 장을 예고한다.
 
-## 입력 문서 발췌
+---
 
 ### Brief Reference
 
@@ -62,3 +73,17 @@ class DraftComposer:
 """
         write_text(path, body)
         return path
+
+    @staticmethod
+    def _extract_section_from_brief(brief: str, section_name: str) -> str:
+        items = []
+        in_section = False
+        for line in brief.splitlines():
+            if section_name in line:
+                in_section = True
+                continue
+            if in_section and line.strip().startswith("##"):
+                break
+            if in_section and line.strip():
+                items.append(line)
+        return "\n".join(items) if items else f"(brief에서 '{section_name}' 섹션을 확인하라)"

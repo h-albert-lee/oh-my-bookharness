@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from bookharness.orchestrator.runner import ApprovalRequiredError, WorkflowRunner
-from bookharness.utils.yaml_utils import dump_yaml, load_yaml
+from bookharness.utils.io import read_json, write_json
 from bookharness_api.services.audit_service import AuditService
 from bookharness_api.services.helpers import utc_now
 from bookharness_api.services.metadata_index import MetadataIndex
@@ -118,14 +118,17 @@ class JobService:
                 self.index.sync_all()
 
     def get_job(self, job_id: str) -> dict[str, Any]:
-        return load_yaml(self.root / f"workflow/runs/{job_id}.json") or {}
+        path = self.root / f"workflow/runs/{job_id}.json"
+        if not path.exists():
+            return {}
+        return read_json(path)
 
     def list_jobs(self, limit: int = 20) -> list[dict[str, Any]]:
         self.index.sync_runs()
         runs_dir = self.root / "workflow/runs"
-        jobs = [load_yaml(path) or {} for path in sorted(runs_dir.glob("*.json"), reverse=True)]
+        jobs = [read_json(path) for path in sorted(runs_dir.glob("*.json"), reverse=True) if path.exists()]
         jobs.sort(key=lambda item: item.get("created_at", ""), reverse=True)
         return jobs[:limit]
 
     def _write_job(self, payload: dict[str, Any]) -> None:
-        dump_yaml(self.root / f"workflow/runs/{payload['job_id']}.json", payload)
+        write_json(self.root / f"workflow/runs/{payload['job_id']}.json", payload)
