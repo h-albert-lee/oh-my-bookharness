@@ -4,8 +4,9 @@ Every agent MUST call the LLM backend. There is no template fallback.
 Tests inject a MockLLMBackend via set_backend().
 
 Configuration:
-- ANTHROPIC_API_KEY: Required for production
-- BOOKHARNESS_MODEL: Model ID (default: claude-sonnet-4-20250514)
+- BOOKHARNESS_LLM_PROVIDER: "anthropic" (default) or "openai"
+- ANTHROPIC_API_KEY / OPENAI_API_KEY: API key for the chosen provider
+- BOOKHARNESS_MODEL: Model ID (provider-specific default if unset)
 - BOOKHARNESS_MAX_TOKENS: Max output tokens (default: 8192)
 """
 
@@ -51,6 +52,40 @@ class AnthropicBackend:
         return response.content[0].text
 
 
+class OpenAIBackend:
+    """Production backend using the OpenAI Chat Completions API."""
+
+    DEFAULT_MODEL = "gpt-4o"
+
+    def __init__(
+        self,
+        model: str | None = None,
+        max_tokens: int | None = None,
+        api_key: str | None = None,
+    ) -> None:
+        try:
+            import openai
+        except ImportError as exc:
+            raise ImportError(
+                "openai package is required. "
+                "Install with: pip install 'bookharness[openai]'"
+            ) from exc
+        self.model = model or os.environ.get("BOOKHARNESS_MODEL", self.DEFAULT_MODEL)
+        self.default_max_tokens = max_tokens or int(os.environ.get("BOOKHARNESS_MAX_TOKENS", "8192"))
+        self.client = openai.OpenAI(api_key=api_key)
+
+    def generate(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
+        response = self.client.chat.completions.create(
+            model=self.model,
+            max_tokens=max_tokens or self.default_max_tokens,
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        )
+        return response.choices[0].message.content
+
+
 _backend: LLMBackend | None = None
 
 
@@ -83,8 +118,9 @@ def get_backend() -> LLMBackend:
     Priority:
     1. Explicitly set backend (via set_backend())
     2. Built-in mock (if BOOKHARNESS_MOCK=1)
-    3. Anthropic API (if ANTHROPIC_API_KEY is set)
-    4. Raise RuntimeError
+    3. BOOKHARNESS_LLM_PROVIDER explicit choice ("anthropic" or "openai")
+    4. Auto-detect: OPENAI_API_KEY → OpenAI, ANTHROPIC_API_KEY → Anthropic
+    5. Raise RuntimeError
     """
     global _backend
     if _backend is not None:
@@ -92,16 +128,38 @@ def get_backend() -> LLMBackend:
     if os.environ.get("BOOKHARNESS_MOCK") == "1":
         _backend = _BuiltinMockBackend()
         return _backend
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise RuntimeError(
-            "No LLM backend configured. "
-            "Set ANTHROPIC_API_KEY for production, "
-            "BOOKHARNESS_MOCK=1 for testing, "
-            "or call set_backend() in code."
-        )
-    _backend = AnthropicBackend()
-    return _backend
+
+    provider = os.environ.get("BOOKHARNESS_LLM_PROVIDER", "").lower()
+
+    if provider == "openai":
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise RuntimeError("BOOKHARNESS_LLM_PROVIDER=openai but OPENAI_API_KEY is not set.")
+        _backend = OpenAIBackend()
+        return _backend
+
+    if provider == "anthropic":
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            raise RuntimeError("BOOKHARNESS_LLM_PROVIDER=anthropic but ANTHROPIC_API_KEY is not set.")
+        _backend = AnthropicBackend()
+        return _backend
+
+    if provider and provider not in ("anthropic", "openai"):
+        raise RuntimeError(f"Unknown BOOKHARNESS_LLM_PROVIDER: {provider!r}. Use 'anthropic' or 'openai'.")
+
+    if os.environ.get("OPENAI_API_KEY"):
+        _backend = OpenAIBackend()
+        return _backend
+
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        _backend = AnthropicBackend()
+        return _backend
+
+    raise RuntimeError(
+        "No LLM backend configured. "
+        "Set ANTHROPIC_API_KEY or OPENAI_API_KEY for production, "
+        "BOOKHARNESS_MOCK=1 for testing, "
+        "or call set_backend() in code."
+    )
 
 
 def set_backend(backend: LLMBackend) -> None:

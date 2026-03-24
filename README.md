@@ -24,6 +24,8 @@
 - `docs/README.md`: 문서 인덱스
 - `docs/getting_started.md`: 빠른 시작
 - `docs/architecture.md`: 아키텍처 개요
+- `docs/agent_pipeline.md`: 에이전트 파이프라인 구조
+- `docs/sources_guide.md`: 참고문헌 제공 방법
 - `docs/backend.md`: backend 서비스 구조
 - `docs/frontend.md`: dashboard UI 구조
 - `docs/operations.md`: 운영 가이드

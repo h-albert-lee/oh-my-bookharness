@@ -16,6 +16,22 @@
   - 주요 디렉토리 설명
   - 데이터 흐름
 
+### 에이전트 파이프라인
+- `docs/agent_pipeline.md`
+  - 전체 파이프라인 흐름도
+  - 에이전트별 역할, 입력, 산출물
+  - 프롬프트 4계층 구조
+  - 컨텍스트 흐름 다이어그램
+  - 비-LLM 구성요소 (AcceptanceGate, BinaryGateChecker, SummaryBuilder)
+
+### 참고문헌 제공
+- `docs/sources_guide.md`
+  - 원문 파일 배치 규칙
+  - 레지스트리(registry.yaml) 작성법
+  - 파이프라인 자동 산출물
+  - 이후 단계에서의 소스 사용 범위
+  - 실전 예시
+
 ### 백엔드
 - `docs/backend.md`
   - FastAPI 앱 구조
@@ -55,8 +71,10 @@
 1. `README.md`
 2. `docs/getting_started.md`
 3. `docs/architecture.md`
-4. `docs/backend.md` 또는 `docs/frontend.md`
-5. 필요 시 `specs/*`
+4. `docs/agent_pipeline.md`
+5. `docs/sources_guide.md`
+6. `docs/backend.md` 또는 `docs/frontend.md`
+7. 필요 시 `specs/*`
 
 ### 코드 어시스턴트
 1. `docs/assistant_guide.md`
