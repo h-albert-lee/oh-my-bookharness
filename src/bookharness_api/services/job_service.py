@@ -21,6 +21,15 @@ class JobService:
         self.index = MetadataIndex(root)
         self.executor = ThreadPoolExecutor(max_workers=4)
         self._lock = threading.Lock()
+        self._chapter_locks: dict[str, threading.Lock] = {}
+        self._chapter_locks_guard = threading.Lock()
+
+    def _get_chapter_lock(self, chapter_id: str) -> threading.Lock:
+        """Get or create a per-chapter lock to prevent concurrent operations."""
+        with self._chapter_locks_guard:
+            if chapter_id not in self._chapter_locks:
+                self._chapter_locks[chapter_id] = threading.Lock()
+            return self._chapter_locks[chapter_id]
 
     def create_job(self, chapter_id: str, job_type: str, actor: str, payload: dict[str, Any]) -> dict[str, Any]:
         job = {
@@ -62,11 +71,28 @@ class JobService:
     def _execute_job(self, job_id: str, operation: Callable[[], Any]) -> None:
         with self._lock:
             job = self.get_job(job_id)
-            job["status"] = "running"
-            job["started_at"] = utc_now()
-            job["log"].append("Started execution")
-            self._write_job(job)
+            chapter_id = job.get("chapter_id", "")
+
+        chapter_lock = self._get_chapter_lock(chapter_id)
+        if not chapter_lock.acquire(blocking=False):
+            # Another job is already running for this chapter
+            with self._lock:
+                job = self.get_job(job_id)
+                job["status"] = "failed"
+                job["finished_at"] = utc_now()
+                job["error"] = f"Chapter {chapter_id} already has a running job. Wait for it to finish."
+                job["log"].append(job["error"])
+                self._write_job(job)
+                self.audit.record("job_failed", job["actor"], {"job_id": job_id, "chapter_id": chapter_id, "error": job["error"]})
+            return
+
         try:
+            with self._lock:
+                job = self.get_job(job_id)
+                job["status"] = "running"
+                job["started_at"] = utc_now()
+                job["log"].append("Started execution")
+                self._write_job(job)
             result = operation()
             with self._lock:
                 job = self.get_job(job_id)
@@ -116,6 +142,8 @@ class JobService:
                     {"job_id": job_id, "chapter_id": job["chapter_id"], "error": str(exc)},
                 )
                 self.index.sync_all()
+        finally:
+            chapter_lock.release()
 
     def get_job(self, job_id: str) -> dict[str, Any]:
         path = self.root / f"workflow/runs/{job_id}.json"

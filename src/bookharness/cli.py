@@ -22,6 +22,7 @@ def scaffold_project(root: Path) -> None:
         "sources/raw/talks",
         "sources/raw/docs",
         "sources/raw/interviews",
+        "sources/raw/web_searches",
         "sources/normalized",
         "sources/metadata",
         "sources/chapter_packs",

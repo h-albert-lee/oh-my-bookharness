@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from bookharness.cli import scaffold_project
-from bookharness_api.routers import approvals, artifacts, chapters, project, runs
+from bookharness_api.routers import agent_logs, approvals, artifacts, chapters, project, runs
 from bookharness_api.services.artifact_service import ArtifactService
 from bookharness_api.services.audit_service import AuditService
 from bookharness_api.services.chapter_service import ChapterService
@@ -35,6 +35,7 @@ def create_app(root: str | Path = ".") -> FastAPI:
     app.include_router(artifacts.router)
     app.include_router(approvals.router)
     app.include_router(runs.router)
+    app.include_router(agent_logs.router)
 
     static_dir = Path(__file__).resolve().parent / "static"
     app.mount("/static", StaticFiles(directory=static_dir), name="static")

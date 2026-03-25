@@ -30,6 +30,12 @@ class ApprovalRequest(BaseModel):
     actor: str = "api"
 
 
+class ArtifactSaveRequest(BaseModel):
+    path: str
+    content: str
+    actor: str = "ui-editor"
+
+
 class JobResponse(BaseModel):
     job_id: str
     chapter_id: str

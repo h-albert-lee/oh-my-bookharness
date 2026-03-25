@@ -38,9 +38,13 @@ class AnthropicBackend:
                 "anthropic package is required. "
                 "Install with: pip install 'bookharness[llm]'"
             ) from exc
-        self.model = model or os.environ.get("BOOKHARNESS_MODEL", "claude-sonnet-4-20250514")
+        self.model = model or os.environ.get("BOOKHARNESS_MODEL", "claude-sonnet-4-6")
         self.default_max_tokens = max_tokens or int(os.environ.get("BOOKHARNESS_MAX_TOKENS", "8192"))
-        self.client = anthropic.Anthropic(api_key=api_key)
+        timeout = float(os.environ.get("BOOKHARNESS_TIMEOUT", "300"))
+        self.client = anthropic.Anthropic(
+            api_key=api_key,
+            timeout=timeout,
+        )
 
     def generate(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
         response = self.client.messages.create(
@@ -50,6 +54,21 @@ class AnthropicBackend:
             messages=[{"role": "user", "content": user}],
         )
         return response.content[0].text
+
+    def search_web(self, query: str, *, max_tokens: int | None = None) -> str:
+        """Call LLM with web search tool enabled. Returns text with grounded citations."""
+        response = self.client.messages.create(
+            model=self.model,
+            max_tokens=max_tokens or self.default_max_tokens,
+            tools=[{"type": "web_search_20250305", "name": "web_search"}],
+            messages=[{"role": "user", "content": query}],
+        )
+        # Extract all text blocks from the response
+        parts = []
+        for block in response.content:
+            if hasattr(block, "text"):
+                parts.append(block.text)
+        return "\n\n".join(parts) if parts else ""
 
 
 class OpenAIBackend:

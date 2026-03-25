@@ -9,6 +9,13 @@ from bookharness.utils.io import write_text
 
 
 class DraftWriterAgent(BaseAgent):
+    def _get_expected_pages(self, ctx: dict, chapter_id: str) -> int:
+        ch_deps = ctx.get("chapter_dependencies", {})
+        ch_info = ch_deps.get(chapter_id, {}) if isinstance(ch_deps, dict) else {}
+        if isinstance(ch_info, dict):
+            return ch_info.get("expected_pages", 20)
+        return 20
+
     def write(self, chapter_id: str, title: str, revision_mode: bool = False) -> Path:
         ctx = self.load_project_context()
         brief = self.load_chapter_brief(chapter_id)
@@ -16,6 +23,9 @@ class DraftWriterAgent(BaseAgent):
         source_notes = self.load_chapter_source_notes(chapter_id)
         prior_summaries = self.load_prior_summaries()
         context_block = self._build_context_block(ctx)
+        expected_pages = self._get_expected_pages(ctx, chapter_id)
+        target_chars = expected_pages * 500
+        target_words = target_chars // 3  # 한국어 평균 글자/단어 비율
 
         summaries_block = "\n\n".join(
             f"### {ch}\n{summary[:300]}" for ch, summary in prior_summaries.items()
@@ -41,6 +51,7 @@ class DraftWriterAgent(BaseAgent):
 ## 장 정보
 - chapter_id: {chapter_id}
 - 제목: {title}
+- 목표 분량: {expected_pages}쪽 (약 {target_chars}자, {target_words}단어 이상)
 
 ## Chapter Brief
 {brief}
@@ -66,9 +77,12 @@ class DraftWriterAgent(BaseAgent):
 5. 첫 등장하는 전문 용어는 한국어 설명을 함께 제공한다.
 6. 장 도입부에서 독자에게 이 장에서 다루는 내용을 안내한다.
 7. 각 섹션 전환부에서 앞 내용을 간략히 요약하고 다음 내용을 예고한다.
-8. 최소 2000단어 이상 작성한다.
+8. 목표 분량({expected_pages}쪽, 약 {target_chars}자)에 맞춰 작성한다. 최소 {target_words}단어 이상.
+9. 분량이 부족하면 예시, 비유, 실무 사례를 추가하여 채운다.
 """
-        content = self._call_llm(DRAFT_WRITER, user_prompt, max_tokens=16384)
+        # max_tokens 조정: 페이지 수에 비례 (쪽당 ~1000 토큰 기준)
+        adjusted_max_tokens = max(8192, expected_pages * 1000)
+        content = self._call_llm(DRAFT_WRITER, user_prompt, max_tokens=adjusted_max_tokens)
 
         chapter_dir = self.root / f"manuscript/{chapter_id}"
         path = next_draft_path(chapter_dir)

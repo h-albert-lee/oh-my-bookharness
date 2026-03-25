@@ -1,16 +1,19 @@
-const state = {
-  currentChapterId: null,
+/* ── State ── */
+const S = {
+  chapterId: null,
   renderMode: "rendered",
+  editing: false,
   chapterFilter: "",
   statusFilter: "all",
   artifactFilter: "",
   selectedArtifact: null,
-  allChapters: [],
+  chapters: [],
+  currentArtifacts: [],
   autoRefresh: true,
-  autoRefreshTimer: null,
+  timer: null,
 };
 
-const stages = [
+const STAGES = [
   "brief_generation",
   "source_collection",
   "source_analysis",
@@ -23,471 +26,463 @@ const stages = [
   "human_approval_b",
 ];
 
-async function api(path, options = {}) {
-  const response = await fetch(path, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!response.ok) {
-    throw new Error(await response.text());
-  }
-  return response.json();
+const STAGE_LABELS = {
+  brief_generation: "Brief",
+  source_collection: "Sources",
+  source_analysis: "Analysis",
+  outline_design: "Outline",
+  human_approval_a: "Approval A",
+  draft_writing: "Draft",
+  automated_review: "Review",
+  revision_plan_synthesis: "Rev. Plan",
+  draft_revision: "Revision",
+  human_approval_b: "Approval B",
+};
+
+/* ── API ── */
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
 
-function notify(message, isError = false) {
-  const toast = document.getElementById("toast");
-  toast.classList.remove("hidden");
-  toast.textContent = message;
-  toast.style.borderColor = isError ? "var(--danger)" : "var(--border)";
-  setTimeout(() => toast.classList.add("hidden"), 2400);
-}
+/* ── Helpers ── */
+function $(id) { return document.getElementById(id); }
+function esc(t) { return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function fmtDate(v) { if (!v) return "-"; const d = new Date(v); return isNaN(d) ? v : d.toLocaleString("ko-KR"); }
 
-function showView(name) {
-  document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
-  document.querySelectorAll(".nav-button").forEach((button) => button.classList.remove("active"));
-  document.getElementById(`view-${name}`).classList.add("active");
-  const nav = document.getElementById(`nav-${name}`);
-  if (nav) nav.classList.add("active");
+function notify(msg, err = false) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = err ? "toast error" : "toast";
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.add("hidden"), 3000);
 }
 
 function badge(status) {
-  const text = String(status || "unknown");
-  const css =
-    text.includes("approved") || text.includes("completed")
-      ? "success"
-      : text.includes("failed") || text.includes("rejected")
-        ? "danger"
-        : "warning";
-  return `<span class="badge ${css}">${text}</span>`;
+  const s = String(status || "unknown");
+  const cls = s.includes("approved") || s.includes("completed") || s.includes("succeeded") ? "badge-success"
+    : s.includes("failed") || s.includes("rejected") ? "badge-danger"
+    : s.includes("running") || s.includes("queued") ? "badge-accent"
+    : "badge-warning";
+  return `<span class="badge ${cls}">${s.replace(/_/g, " ")}</span>`;
 }
 
-function escapeHtml(text) {
-  return String(text)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+function showView(name) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+  $(`view-${name}`).classList.add("active");
+  const nav = $(`nav-${name}`);
+  if (nav) nav.classList.add("active");
 }
 
-function formatDateTime(value) {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("ko-KR");
-}
+function showLoading(on) { $("loading-overlay").classList.toggle("hidden", !on); }
 
-function stageProgress(chapter) {
-  const idx = Math.max(stages.indexOf(chapter.current_stage), 0);
-  const pct = Math.round(((idx + 1) / stages.length) * 100);
-  return `<div><div class="badge stage">${idx + 1}/${stages.length}</div><div class="stage-progress-bar"><div class="stage-progress-fill" style="width:${pct}%"></div></div></div>`;
-}
+/* ── Dashboard ── */
+async function loadDashboard() {
+  try {
+    const p = await api("/api/project");
+    S.chapters = p.chapters;
+    $("project-title").textContent = p.title || "BookHarness";
+    $("global-status").textContent = `${p.metrics.chapter_count} chapters · ${p.metrics.pending_approval_count} pending approvals`;
 
-function applyChapterTableFilters() {
-  const filtered = state.allChapters.filter((chapter) => {
-    const keyword = state.chapterFilter.trim().toLowerCase();
-    const searchHit =
-      !keyword ||
-      chapter.chapter_id.toLowerCase().includes(keyword) ||
-      chapter.title.toLowerCase().includes(keyword);
-    const statusHit = state.statusFilter === "all" || chapter.status === state.statusFilter;
-    return searchHit && statusHit;
-  });
+    // Approval badge
+    const ab = $("approval-badge");
+    if (p.metrics.pending_approval_count > 0) {
+      ab.textContent = p.metrics.pending_approval_count;
+      ab.classList.remove("hidden");
+    } else {
+      ab.classList.add("hidden");
+    }
 
-  document.getElementById("chapter-table").innerHTML = filtered.length
-    ? filtered
-        .map(
-          (chapter) => `<tr>
-        <td><strong>${chapter.chapter_id}</strong><br /><span class="subtle">${chapter.title}</span></td>
-        <td>${badge(chapter.status)}</td>
-        <td>${stageProgress(chapter)}</td>
-        <td>${chapter.latest_draft || "-"}</td>
-        <td><button data-open-chapter="${chapter.chapter_id}">열기</button></td>
-      </tr>`
-        )
-        .join("")
-    : `<tr><td colspan="5" class="subtle">조건에 맞는 chapter가 없습니다.</td></tr>`;
+    $("metrics").innerHTML = [
+      ["Chapters", p.metrics.chapter_count, "Total"],
+      ["Approved", p.metrics.approved_count, "Final"],
+      ["Pending", p.metrics.pending_approval_count, "Needs review"],
+      ["Jobs", p.metrics.recent_run_count, "Recent"],
+    ].map(([l,v,h]) => `<div class="metric"><div class="metric-label">${l}</div><div class="metric-value">${v}</div><div class="metric-hint">${h}</div></div>`).join("");
 
-  document.querySelectorAll("[data-open-chapter]").forEach((button) => {
-    button.onclick = () => openChapter(button.dataset.openChapter);
-  });
-}
+    populateStatusFilter(p.chapters);
+    renderChapterTable();
 
-function setDashboardMeta(project) {
-  document.getElementById("project-title").textContent = project.title;
-  document.getElementById("dashboard-updated").textContent = `최근 갱신: ${new Date().toLocaleTimeString("ko-KR")}`;
-  document.getElementById("global-status").textContent = `${project.metrics.chapter_count} chapters · ${project.metrics.pending_approval_count} approvals 대기`;
+    $("pending-approvals").innerHTML = p.pending_approvals.length
+      ? p.pending_approvals.map(a => `<div class="approval-item"><div class="info"><strong>${a.chapter_id}</strong> <span class="subtle">${a.title}</span><div>${badge(a.status)} <span class="subtle">${a.approval_key}</span></div></div><button class="btn btn-sm" data-open="${a.chapter_id}">Review</button></div>`).join("")
+      : `<div class="empty">No pending approvals</div>`;
 
-  document.getElementById("metrics").innerHTML = [
-    ["전체 Chapter", project.metrics.chapter_count, "작성 파이프라인 관리 대상"],
-    ["최종 승인 완료", project.metrics.approved_count, "release-ready 후보"],
-    ["승인 대기", project.metrics.pending_approval_count, "human decision 필요"],
-    ["최근 Job", project.metrics.recent_run_count, "agent 실행 추적"],
-  ]
-    .map(([label, value, hint]) => `<div class="metric-card"><div class="label">${label}</div><div class="value">${value}</div><div class="hint">${hint}</div></div>`)
-    .join("");
+    $("recent-runs").innerHTML = p.recent_runs.length
+      ? p.recent_runs.map(r => `<div class="job-item"><div class="tl-head"><strong>${r.chapter_id || "-"}</strong> ${badge(r.status)}</div><div class="tl-sub">${r.job_type} · ${r.actor} · ${fmtDate(r.created_at)}</div></div>`).join("")
+      : `<div class="empty">No recent jobs</div>`;
+
+    bindOpenButtons();
+  } catch (e) { notify(`Dashboard error: ${e.message}`, true); }
 }
 
 function populateStatusFilter(chapters) {
-  const select = document.getElementById("chapter-status-filter");
-  const statuses = [...new Set(chapters.map((chapter) => chapter.status))].sort();
-  select.innerHTML = `<option value="all">모든 상태</option>${statuses
-    .map((status) => `<option value="${status}">${status}</option>`)
-    .join("")}`;
-  select.value = state.statusFilter;
+  const sel = $("chapter-status-filter");
+  const statuses = [...new Set(chapters.map(c => c.status))].sort();
+  sel.innerHTML = `<option value="all">All statuses</option>` + statuses.map(s => `<option value="${s}">${s.replace(/_/g," ")}</option>`).join("");
+  sel.value = S.statusFilter;
 }
 
-async function loadDashboard() {
-  try {
-    const project = await api("/api/project");
-    state.allChapters = project.chapters;
-    setDashboardMeta(project);
-    populateStatusFilter(project.chapters);
-    applyChapterTableFilters();
+function renderChapterTable() {
+  const kw = S.chapterFilter.toLowerCase();
+  const filtered = S.chapters.filter(c => {
+    const hit = !kw || c.chapter_id.toLowerCase().includes(kw) || c.title.toLowerCase().includes(kw);
+    const st = S.statusFilter === "all" || c.status === S.statusFilter;
+    return hit && st;
+  });
 
-    document.getElementById("pending-approvals").innerHTML = project.pending_approvals.length
-      ? project.pending_approvals
-          .map(
-            (item) => `<div class="approval-card">
-              <strong>${item.chapter_id}</strong> ${badge(item.status)}
-              <p>${item.title}</p>
-              <p class="subtle">expected: ${item.approval_key}</p>
-              <button data-open-chapter="${item.chapter_id}">검토하기</button>
-            </div>`
-          )
-          .join("")
-      : `<p class="subtle">대기 중인 approval이 없습니다.</p>`;
+  const stageIdx = (c) => Math.max(STAGES.indexOf(c.current_stage), 0);
 
-    document.getElementById("recent-runs").innerHTML = project.recent_runs.length
-      ? project.recent_runs
-          .map(
-            (run) => `<div class="job-card">
-              <strong>${run.job_type}</strong> ${badge(run.status)}
-              <div>${run.chapter_id || "-"}</div>
-              <div class="subtle">actor: ${run.actor} · ${formatDateTime(run.created_at)}</div>
-            </div>`
-          )
-          .join("")
-      : `<p class="subtle">실행 이력이 없습니다.</p>`;
+  $("chapter-table").innerHTML = filtered.length
+    ? filtered.map(c => {
+      const idx = stageIdx(c);
+      const pct = Math.round(((idx + 1) / STAGES.length) * 100);
+      return `<tr>
+        <td><strong>${c.chapter_id}</strong><br><span class="subtle">${c.title}</span></td>
+        <td>${badge(c.status)}</td>
+        <td><div style="display:flex;align-items:center;gap:8px"><span class="subtle" style="font-size:11px;white-space:nowrap">${STAGE_LABELS[c.current_stage] || c.current_stage}</span><div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${pct}%"></div></div><span class="subtle" style="font-size:11px">${pct}%</span></div></td>
+        <td><span class="subtle">${c.latest_draft || "-"}</span></td>
+        <td><button class="btn btn-sm" data-open="${c.chapter_id}">Open</button></td>
+      </tr>`;
+    }).join("")
+    : `<tr><td colspan="5" class="empty">No chapters match</td></tr>`;
 
-    document.querySelectorAll("[data-open-chapter]").forEach((button) => {
-      button.onclick = () => openChapter(button.dataset.openChapter);
-    });
-  } catch (error) {
-    notify(`대시보드 로딩 실패: ${error.message}`, true);
-  }
+  bindOpenButtons();
 }
 
-async function loadApprovalQueue() {
+function bindOpenButtons() {
+  document.querySelectorAll("[data-open]").forEach(b => {
+    b.onclick = () => openChapter(b.dataset.open);
+  });
+}
+
+/* ── Approval Queue ── */
+async function loadApprovals() {
   try {
     const items = await api("/api/approvals/pending");
-    document.getElementById("approval-queue").innerHTML = items.length
-      ? items
-          .map(
-            (item, idx) => `<div class="approval-card">
-              <div class="button-row" style="justify-content: space-between; align-items: center;">
-                <div>
-                  <strong>#${idx + 1} · ${item.chapter_id}</strong> ${badge(item.status)}
-                  <p>${item.title}</p>
-                  <p class="subtle">approval key: ${item.approval_key}</p>
-                </div>
-                <button data-open-chapter="${item.chapter_id}">열기</button>
-              </div>
-            </div>`
-          )
-          .join("")
-      : `<div class="panel"><p class="subtle">현재 승인 대기 항목이 없습니다.</p></div>`;
-
-    document.querySelectorAll("[data-open-chapter]").forEach((button) => {
-      button.onclick = () => openChapter(button.dataset.openChapter);
-    });
-  } catch (error) {
-    notify(`Approval Queue 로딩 실패: ${error.message}`, true);
-  }
+    $("approval-queue").innerHTML = items.length
+      ? items.map((a, i) => `<div class="card" style="margin-bottom:12px"><div class="card-body"><div style="display:flex;justify-content:space-between;align-items:center"><div><strong>#${i+1} ${a.chapter_id}</strong> ${badge(a.status)}<div class="subtle">${a.title} · ${a.approval_key}</div></div><button class="btn btn-sm btn-primary" data-open="${a.chapter_id}">Review</button></div></div></div>`).join("")
+      : `<div class="card"><div class="empty">No pending approvals</div></div>`;
+    bindOpenButtons();
+  } catch (e) { notify(`Approval error: ${e.message}`, true); }
 }
 
-async function openChapter(chapterId) {
-  state.currentChapterId = chapterId;
-  state.selectedArtifact = null;
+/* ── Chapter Detail ── */
+async function openChapter(id) {
+  S.chapterId = id;
+  S.selectedArtifact = null;
+  S.editing = false;
   showView("chapter");
-  await loadChapter(chapterId);
+  await loadChapter();
 }
 
-function renderStageNavigator(chapter) {
-  const currentIdx = Math.max(stages.indexOf(chapter.current_stage), 0);
-  const pct = Math.round(((currentIdx + 1) / stages.length) * 100);
-  document.getElementById("stage-progress").innerHTML = `
-    <p class="subtle">현재 단계: <strong>${chapter.current_stage}</strong></p>
-    <div class="stage-progress-bar"><div class="stage-progress-fill" style="width:${pct}%"></div></div>
-    <p class="subtle">${currentIdx + 1} / ${stages.length} 단계</p>
-    <div class="stage-progress-track">
-      ${stages
-        .map(
-          (stage, idx) => `<div class="stage-card ${idx === currentIdx ? "active" : ""}">
-            <span>${idx + 1}. ${stage}</span>
-            ${idx < currentIdx ? '<span class="badge success">done</span>' : idx === currentIdx ? '<span class="badge warning">current</span>' : '<span class="badge">todo</span>'}
-          </div>`
-        )
-        .join("")}
-    </div>
-  `;
+async function loadChapter() {
+  const id = S.chapterId;
+  if (!id) return;
+  try {
+    const d = await api(`/api/chapters/${id}`);
+    const c = d.state;
+    S.currentArtifacts = d.artifacts;
+    $("chapter-heading").textContent = `${c.chapter_id} · ${c.title}`;
+    $("chapter-meta").innerHTML = `${badge(c.status)} · Stage: ${STAGE_LABELS[c.current_stage] || c.current_stage}`;
+
+    renderPipeline(c);
+    renderActions(c);
+    renderArtifacts(d.artifacts);
+    renderDiffOptions(d.artifacts);
+    renderRuns(d.runs);
+    renderAudit(d.audit);
+    renderReviews(d.review_reports);
+
+    if (d.artifacts.length && !S.selectedArtifact) {
+      S.selectedArtifact = d.artifacts[0].path;
+    }
+    if (S.selectedArtifact) {
+      await loadArtifact(S.selectedArtifact);
+      renderArtifacts(d.artifacts);
+    } else {
+      $("artifact-viewer").innerHTML = `<div class="empty">No artifacts yet. Run a stage to generate content.</div>`;
+      $("active-artifact").textContent = "No artifact selected";
+    }
+  } catch (e) { notify(`Chapter error: ${e.message}`, true); }
 }
 
-function renderArtifactList(artifacts) {
-  const keyword = state.artifactFilter.trim().toLowerCase();
-  const filtered = artifacts.filter((artifact) => !keyword || artifact.name.toLowerCase().includes(keyword) || artifact.path.toLowerCase().includes(keyword));
+function renderPipeline(chapter) {
+  const cur = Math.max(STAGES.indexOf(chapter.current_stage), 0);
+  $("stage-progress").innerHTML = `<div class="pipeline">${STAGES.map((s, i) => {
+    const cls = i < cur ? "done" : i === cur ? "current" : "todo";
+    return `<div class="pipeline-step ${cls}"><span class="step-label">${STAGE_LABELS[s]}</span>${i < cur ? '<span class="badge badge-success step-badge">done</span>' : i === cur ? '<span class="badge badge-accent step-badge">current</span>' : ''}</div>`;
+  }).join("")}</div>`;
+}
 
-  document.getElementById("artifact-list").innerHTML = filtered.length
-    ? filtered
-        .map(
-          (artifact) => `<div class="artifact-card"><button data-artifact="${artifact.path}" class="${state.selectedArtifact === artifact.path ? "active" : ""}">${artifact.name}</button></div>`
-        )
-        .join("")
-    : `<p class="subtle">조건에 맞는 artifact가 없습니다.</p>`;
+function renderActions(chapter) {
+  $("stage-actions").innerHTML = STAGES.map(s =>
+    `<button class="btn btn-sm" data-run-stage="${s}" title="${s}">${STAGE_LABELS[s]}</button>`
+  ).join("");
 
-  document.querySelectorAll("[data-artifact]").forEach((button) => {
-    button.onclick = () => {
-      state.selectedArtifact = button.dataset.artifact;
-      loadArtifact(button.dataset.artifact);
-      renderArtifactList(artifacts);
+  document.querySelectorAll("[data-run-stage]").forEach(b => {
+    b.onclick = async () => {
+      try {
+        showLoading(true);
+        await api(`/api/chapters/${S.chapterId}/run-stage`, {
+          method: "POST",
+          body: JSON.stringify({ stage: b.dataset.runStage, actor: "ui-editor" }),
+        });
+        notify(`Queued: ${b.dataset.runStage}`);
+        setTimeout(() => { showLoading(false); loadChapter(); }, 500);
+      } catch (e) { showLoading(false); notify(`Failed: ${e.message}`, true); }
+    };
+  });
+
+  // Run MVP button
+  $("run-mvp-btn").onclick = async () => {
+    try {
+      showLoading(true);
+      const detail = await api(`/api/chapters/${S.chapterId}`);
+      await api(`/api/chapters/${S.chapterId}/run-mvp`, {
+        method: "POST",
+        body: JSON.stringify({ title: detail.state.title, dependencies: detail.state.dependencies || [], actor: "ui-editor" }),
+      });
+      notify("Full pipeline queued");
+      setTimeout(() => { showLoading(false); loadChapter(); }, 500);
+    } catch (e) { showLoading(false); notify(`MVP failed: ${e.message}`, true); }
+  };
+}
+
+function renderArtifacts(artifacts) {
+  const kw = S.artifactFilter.toLowerCase();
+  const filtered = artifacts.filter(a => !kw || a.name.toLowerCase().includes(kw) || a.path.toLowerCase().includes(kw));
+  $("artifact-list").innerHTML = filtered.length
+    ? filtered.map(a => `<button class="artifact-chip ${S.selectedArtifact === a.path ? "active" : ""}" data-artifact="${a.path}">${a.name}</button>`).join("")
+    : `<span class="subtle" style="padding:4px">No artifacts</span>`;
+
+  document.querySelectorAll("[data-artifact]").forEach(b => {
+    b.onclick = () => {
+      S.selectedArtifact = b.dataset.artifact;
+      S.editing = false;
+      loadArtifact(b.dataset.artifact);
+      renderArtifacts(artifacts);
     };
   });
 }
 
+async function loadArtifact(path) {
+  try {
+    const a = await api(`/api/artifacts?path=${encodeURIComponent(path)}`);
+    $("active-artifact").textContent = a.path;
+    const viewer = $("artifact-viewer");
+
+    if (S.editing) {
+      viewer.innerHTML = `<div style="display:flex;flex-direction:column;height:100%">
+        <textarea id="editor-textarea" style="flex:1;min-height:400px;font-family:var(--mono);font-size:13px;line-height:1.6;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:12px;resize:vertical">${esc(a.content)}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" id="editor-cancel">Cancel</button>
+          <button class="btn btn-primary btn-sm" id="editor-save">Save</button>
+        </div>
+      </div>`;
+      $("editor-cancel").onclick = () => { S.editing = false; loadArtifact(path); };
+      $("editor-save").onclick = async () => {
+        const content = $("editor-textarea").value;
+        try {
+          showLoading(true);
+          await api("/api/artifacts", {
+            method: "PUT",
+            body: JSON.stringify({ path: a.path, content, actor: "ui-editor" }),
+          });
+          S.editing = false;
+          showLoading(false);
+          notify("Saved successfully");
+          await loadArtifact(path);
+        } catch (e) { showLoading(false); notify(`Save failed: ${e.message}`, true); }
+      };
+    } else if (S.renderMode === "rendered" && a.rendered_html) {
+      viewer.innerHTML = a.rendered_html;
+    } else {
+      viewer.innerHTML = `<pre>${esc(a.content)}</pre>`;
+    }
+  } catch (e) { notify(`Artifact error: ${e.message}`, true); }
+}
+
+function renderDiffOptions(artifacts) {
+  const drafts = artifacts.filter(a => a.name.startsWith("draft_") || a.name === "final_candidate.md" || a.name.endsWith(".md"));
+  const opts = drafts.map(a => `<option value="${a.path}">${a.name}</option>`).join("");
+  $("diff-left").innerHTML = opts;
+  $("diff-right").innerHTML = opts;
+}
+
 function renderRuns(runs) {
-  document.getElementById("chapter-runs").innerHTML = runs.length
-    ? runs
-        .map((run) => {
-          const hasLog = Array.isArray(run.log) && run.log.length;
-          return `<div class="job-card">
-            <strong>${run.job_type}</strong> ${badge(run.status)}
-            <div class="subtle">actor: ${run.actor}</div>
-            <div class="subtle">created: ${formatDateTime(run.created_at)}</div>
-            <div class="subtle">finished: ${formatDateTime(run.finished_at)}</div>
-            ${run.error ? `<pre>${escapeHtml(run.error)}</pre>` : ""}
-            ${hasLog ? `<details><summary>로그 ${run.log.length}개 보기</summary><pre>${escapeHtml(run.log.join("\n"))}</pre></details>` : ""}
-          </div>`;
-        })
-        .join("")
-    : `<p class="subtle">이 장의 job이 없습니다.</p>`;
+  $("chapter-runs").innerHTML = runs.length
+    ? runs.map(r => `<div class="tl-item"><div class="tl-head"><span>${r.job_type}</span>${badge(r.status)}</div><div class="tl-sub">${r.actor} · ${fmtDate(r.created_at)}${r.finished_at ? ` → ${fmtDate(r.finished_at)}` : ""}</div>${r.error ? `<pre style="color:var(--danger);margin-top:4px">${esc(r.error)}</pre>` : ""}</div>`).join("")
+    : `<div class="empty">No jobs yet</div>`;
 }
 
 function renderAudit(audit) {
-  document.getElementById("chapter-audit").innerHTML = audit.length
-    ? audit
-        .map(
-          (item) => `<div class="audit-card">
-            <strong>${item.event_type}</strong>
-            <div class="subtle">${item.actor} · ${formatDateTime(item.timestamp)}</div>
-            <details>
-              <summary>상세 details</summary>
-              <pre>${escapeHtml(JSON.stringify(item.details, null, 2))}</pre>
-            </details>
-          </div>`
-        )
-        .join("")
-    : `<p class="subtle">감사 로그가 없습니다.</p>`;
+  $("chapter-audit").innerHTML = audit.length
+    ? audit.map(a => `<div class="tl-item"><div class="tl-head"><span>${a.event_type}</span></div><div class="tl-sub">${a.actor} · ${fmtDate(a.timestamp)}</div><details><summary class="subtle">Details</summary><pre>${esc(JSON.stringify(a.details, null, 2))}</pre></details></div>`).join("")
+    : `<div class="empty">No audit entries</div>`;
 }
 
-async function loadChapter(chapterId = state.currentChapterId) {
-  try {
-    const detail = await api(`/api/chapters/${chapterId}`);
-    const chapter = detail.state;
-    document.getElementById("chapter-heading").textContent = `${chapter.chapter_id} · ${chapter.title}`;
-    document.getElementById("chapter-meta").innerHTML = `${badge(chapter.status)} current stage: ${chapter.current_stage}`;
-
-    renderStageNavigator(chapter);
-
-    document.getElementById("stage-actions").innerHTML = stages.map((stage) => `<button data-stage="${stage}">${stage}</button>`).join("");
-    document.querySelectorAll("[data-stage]").forEach((button) => {
-      button.onclick = async () => {
-        try {
-          await api(`/api/chapters/${chapterId}/run-stage`, {
-            method: "POST",
-            body: JSON.stringify({ stage: button.dataset.stage, actor: "ui-editor" }),
-          });
-          notify(`${button.dataset.stage} 실행을 큐에 등록했습니다.`);
-          setTimeout(() => loadChapter(chapterId), 300);
-        } catch (error) {
-          notify(`stage 실행 실패: ${error.message}`, true);
-        }
-      };
-    });
-
-    renderArtifactList(detail.artifacts);
-
-    const draftArtifacts = detail.artifacts.filter((artifact) => artifact.name.startsWith("draft_") || artifact.name === "final_candidate.md");
-    const diffOptions = draftArtifacts.map((artifact) => `<option value="${artifact.path}">${artifact.name}</option>`).join("");
-    document.getElementById("diff-left").innerHTML = diffOptions;
-    document.getElementById("diff-right").innerHTML = diffOptions;
-
-    document.getElementById("review-cards").innerHTML = detail.review_reports.length
-      ? detail.review_reports
-          .map((report) => `<div class="review-card"><strong>${report.path}</strong><pre>${escapeHtml(report.content)}</pre></div>`)
-          .join("")
-      : `<p class="subtle">리뷰 산출물이 아직 없습니다.</p>`;
-
-    renderRuns(detail.runs);
-    renderAudit(detail.audit);
-
-    if (detail.artifacts.length) {
-      state.selectedArtifact = state.selectedArtifact || detail.artifacts[0].path;
-      await loadArtifact(state.selectedArtifact);
-      renderArtifactList(detail.artifacts);
-    } else {
-      document.getElementById("artifact-viewer").innerHTML = `<p class="subtle">표시할 문서가 없습니다.</p>`;
-      document.getElementById("active-artifact").textContent = "";
-    }
-  } catch (error) {
-    notify(`chapter 로딩 실패: ${error.message}`, true);
-  }
+function renderReviews(reports) {
+  $("review-cards").innerHTML = reports.length
+    ? reports.map(r => `<div class="review-item"><strong>${r.path}</strong><pre>${esc(r.content)}</pre></div>`).join("")
+    : `<div class="empty">No review reports yet</div>`;
 }
 
-async function loadArtifact(path) {
-  try {
-    const artifact = await api(`/api/artifacts?path=${encodeURIComponent(path)}`);
-    const container = document.getElementById("artifact-viewer");
-    document.getElementById("active-artifact").textContent = artifact.path;
-    if (state.renderMode === "rendered" && artifact.rendered_html) {
-      container.innerHTML = artifact.rendered_html;
-    } else {
-      container.innerHTML = `<pre>${escapeHtml(artifact.content)}</pre>`;
-    }
-  } catch (error) {
-    notify(`artifact 로딩 실패: ${error.message}`, true);
-  }
-}
-
+/* ── Diff ── */
 async function loadDiff() {
-  const left = document.getElementById("diff-left").value;
-  const right = document.getElementById("diff-right").value;
-  if (!left || !right) return;
+  const l = $("diff-left").value, r = $("diff-right").value;
+  if (!l || !r) return;
   try {
-    const diff = await api(`/api/artifacts/diff?left=${encodeURIComponent(left)}&right=${encodeURIComponent(right)}`);
-    const changed = diff.changed
-      .map((entry) => `<div class="badge ${entry.type === "added" ? "success" : "danger"}">${entry.type}</div><pre>${escapeHtml(entry.line)}</pre>`)
-      .join("");
-
-    const onlyLeft = diff.left_only.length ? `<p class="subtle">left only: ${escapeHtml(diff.left_only.join(", "))}</p>` : "";
-    const onlyRight = diff.right_only.length ? `<p class="subtle">right only: ${escapeHtml(diff.right_only.join(", "))}</p>` : "";
-    document.getElementById("diff-viewer").innerHTML = `${onlyLeft}${onlyRight}${changed || `<p class="subtle">차이가 없습니다.</p>`}`;
-  } catch (error) {
-    notify(`diff 로딩 실패: ${error.message}`, true);
-  }
+    const d = await api(`/api/artifacts/diff?left=${encodeURIComponent(l)}&right=${encodeURIComponent(r)}`);
+    $("diff-viewer").innerHTML = d.changed.length
+      ? d.changed.map(c => `<div class="${c.type === "added" ? "diff-add" : "diff-del"}">${c.type === "added" ? "+" : "-"} ${esc(c.line)}</div>`).join("")
+      : `<div class="empty">No differences</div>`;
+  } catch (e) { notify(`Diff error: ${e.message}`, true); }
 }
 
-async function submitApproval(event) {
-  event.preventDefault();
-  const form = new FormData(event.target);
-  const notes = String(form.get("notes") || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
+/* ── Forms ── */
+async function submitApproval(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const notes = String(fd.get("notes") || "").split("\n").map(l => l.trim()).filter(Boolean);
   try {
-    await api(`/api/chapters/${state.currentChapterId}/approve`, {
+    showLoading(true);
+    await api(`/api/chapters/${S.chapterId}/approve`, {
       method: "POST",
-      body: JSON.stringify({
-        approval_key: form.get("approval_key"),
-        result: form.get("result"),
-        notes,
-        actor: form.get("actor") || "editor_in_chief",
-      }),
+      body: JSON.stringify({ approval_key: fd.get("approval_key"), result: fd.get("result"), notes, actor: fd.get("actor") || "editor" }),
     });
-    notify("승인 요청을 제출했습니다.");
-    setTimeout(() => loadChapter(state.currentChapterId), 300);
-  } catch (error) {
-    notify(`승인 제출 실패: ${error.message}`, true);
-  }
+    showLoading(false);
+    notify("Approval submitted");
+    setTimeout(loadChapter, 300);
+  } catch (e) { showLoading(false); notify(`Approval failed: ${e.message}`, true); }
 }
 
-async function submitCreateChapter(event) {
-  event.preventDefault();
-  const form = new FormData(event.target);
-  const dependencies = String(form.get("dependencies") || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-
+async function submitCreate(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const deps = String(fd.get("dependencies") || "").split(",").map(s => s.trim()).filter(Boolean);
   try {
+    showLoading(true);
     await api("/api/chapters", {
       method: "POST",
-      body: JSON.stringify({
-        chapter_id: form.get("chapter_id"),
-        title: form.get("title"),
-        dependencies,
-        actor: form.get("actor") || "editor",
-      }),
+      body: JSON.stringify({ chapter_id: fd.get("chapter_id"), title: fd.get("title"), dependencies: deps, actor: fd.get("actor") || "editor" }),
     });
-    notify("새 chapter를 생성했습니다.");
+    showLoading(false);
+    notify("Chapter created");
     await loadDashboard();
     showView("dashboard");
-  } catch (error) {
-    notify(`chapter 생성 실패: ${error.message}`, true);
-  }
+  } catch (e) { showLoading(false); notify(`Create failed: ${e.message}`, true); }
 }
 
+/* ── Auto Refresh ── */
 function setupAutoRefresh() {
-  if (state.autoRefreshTimer) clearInterval(state.autoRefreshTimer);
-  if (!state.autoRefresh) return;
-  state.autoRefreshTimer = setInterval(() => {
-    const activeView = document.querySelector(".view.active")?.id;
-    if (activeView === "view-dashboard") loadDashboard();
-    if (activeView === "view-approvals") loadApprovalQueue();
-    if (activeView === "view-chapter" && state.currentChapterId) loadChapter(state.currentChapterId);
+  if (S.timer) clearInterval(S.timer);
+  if (!S.autoRefresh) return;
+  S.timer = setInterval(() => {
+    const active = document.querySelector(".view.active")?.id;
+    if (active === "view-dashboard") loadDashboard();
+    if (active === "view-approvals") loadApprovals();
+    if (active === "view-chapter" && S.chapterId && !S.editing) loadChapter();
+    if (active === "view-logs") loadAgentLogs();
   }, 15000);
 }
 
-async function globalRefresh() {
-  await loadDashboard();
-  if (state.currentChapterId) await loadChapter(state.currentChapterId);
-  await loadApprovalQueue();
-  notify("전체 화면을 새로고침했습니다.");
+/* ── Agent Logs ── */
+async function loadAgentLogs() {
+  try {
+    // Load agent list for filter
+    const agents = await api("/api/agent-logs/agents");
+    const sel = $("log-agent-filter");
+    const current = sel.value;
+    sel.innerHTML = `<option value="">All agents</option>` + agents.map(a => `<option value="${a}">${a}</option>`).join("");
+    sel.value = current;
+
+    const filter = sel.value;
+    const url = filter ? `/api/agent-logs?agent=${encodeURIComponent(filter)}&limit=100` : "/api/agent-logs?limit=100";
+    const logs = await api(url);
+
+    $("agent-log-list").innerHTML = logs.length
+      ? logs.map(l => {
+        const hasError = !!l.error;
+        return `<div class="card" style="margin-bottom:8px">
+          <div class="card-body">
+            <div class="tl-head">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="badge badge-accent">${l.agent}</span>
+                ${hasError ? '<span class="badge badge-danger">error</span>' : `<span class="badge badge-neutral">${l.elapsed_sec}s</span>`}
+              </div>
+              <span class="subtle">${fmtDate(l.timestamp)}</span>
+            </div>
+            ${hasError ? `<pre style="color:var(--danger);margin-top:8px;font-size:12px">${esc(l.error)}</pre>` : ""}
+            <details style="margin-top:8px">
+              <summary class="subtle">System prompt (preview)</summary>
+              <pre style="font-size:12px;margin-top:4px;padding:8px;background:var(--bg);border-radius:var(--radius)">${esc(l.system_prompt_preview || "")}</pre>
+            </details>
+            <details style="margin-top:4px">
+              <summary class="subtle">User prompt (preview)</summary>
+              <pre style="font-size:12px;margin-top:4px;padding:8px;background:var(--bg);border-radius:var(--radius)">${esc(l.user_prompt_preview || "")}</pre>
+            </details>
+            <details style="margin-top:4px">
+              <summary class="subtle">Response (preview)</summary>
+              <pre style="font-size:12px;margin-top:4px;padding:8px;background:var(--bg);border-radius:var(--radius)">${esc(l.response_preview || "")}</pre>
+            </details>
+          </div>
+        </div>`;
+      }).join("")
+      : `<div class="card"><div class="empty">No agent logs yet. Run a pipeline stage to generate logs.</div></div>`;
+  } catch (e) { notify(`Agent logs error: ${e.message}`, true); }
 }
 
-function attachEvents() {
-  document.getElementById("nav-dashboard").onclick = () => {
-    showView("dashboard");
-    loadDashboard();
-  };
-  document.getElementById("nav-approval").onclick = () => {
-    showView("approvals");
-    loadApprovalQueue();
-  };
-  document.getElementById("nav-create").onclick = () => showView("create");
-  document.getElementById("refresh-approvals").onclick = loadApprovalQueue;
-  document.getElementById("refresh-chapter").onclick = () => loadChapter();
-  document.getElementById("back-dashboard").onclick = () => {
-    showView("dashboard");
-    loadDashboard();
-  };
-  document.getElementById("toggle-render").onclick = () => {
-    state.renderMode = state.renderMode === "rendered" ? "raw" : "rendered";
-    if (state.selectedArtifact) loadArtifact(state.selectedArtifact);
-  };
-  document.getElementById("load-diff").onclick = loadDiff;
-  document.getElementById("approval-form").onsubmit = submitApproval;
-  document.getElementById("create-chapter-form").onsubmit = submitCreateChapter;
+/* ── Events ── */
+function init() {
+  $("nav-dashboard").onclick = () => { showView("dashboard"); loadDashboard(); };
+  $("nav-approval").onclick = () => { showView("approvals"); loadApprovals(); };
+  $("nav-create").onclick = () => showView("create");
+  $("nav-logs").onclick = () => { showView("logs"); loadAgentLogs(); };
+  $("global-refresh").onclick = async () => { await loadDashboard(); notify("Refreshed"); };
+  $("refresh-approvals").onclick = loadApprovals;
+  $("refresh-chapter").onclick = loadChapter;
+  $("back-dashboard").onclick = () => { showView("dashboard"); loadDashboard(); };
 
-  document.getElementById("chapter-search").oninput = (event) => {
-    state.chapterFilter = event.target.value;
-    applyChapterTableFilters();
-  };
-  document.getElementById("chapter-status-filter").onchange = (event) => {
-    state.statusFilter = event.target.value;
-    applyChapterTableFilters();
+  $("toggle-render").onclick = () => {
+    if (S.editing) return;
+    S.renderMode = S.renderMode === "rendered" ? "raw" : "rendered";
+    $("toggle-render").textContent = S.renderMode === "rendered" ? "Show Raw" : "Show Rendered";
+    if (S.selectedArtifact) loadArtifact(S.selectedArtifact);
   };
 
-  document.getElementById("artifact-search").oninput = (event) => {
-    state.artifactFilter = event.target.value;
-    loadChapter();
+  // Edit button - add to viewer header
+  const viewerHeader = $("toggle-render").parentElement;
+  const editBtn = document.createElement("button");
+  editBtn.className = "btn btn-ghost btn-sm";
+  editBtn.id = "edit-artifact-btn";
+  editBtn.textContent = "Edit";
+  viewerHeader.prepend(editBtn);
+  editBtn.onclick = () => {
+    if (!S.selectedArtifact) return;
+    S.editing = true;
+    loadArtifact(S.selectedArtifact);
   };
 
-  document.getElementById("global-refresh").onclick = globalRefresh;
-  document.getElementById("auto-refresh-toggle").onchange = (event) => {
-    state.autoRefresh = event.target.checked;
+  $("refresh-logs").onclick = loadAgentLogs;
+  $("log-agent-filter").onchange = loadAgentLogs;
+  $("load-diff").onclick = loadDiff;
+  $("approval-form").onsubmit = submitApproval;
+  $("create-chapter-form").onsubmit = submitCreate;
+
+  $("chapter-search").oninput = (e) => { S.chapterFilter = e.target.value; renderChapterTable(); };
+  $("chapter-status-filter").onchange = (e) => { S.statusFilter = e.target.value; renderChapterTable(); };
+  $("artifact-search").oninput = (e) => { S.artifactFilter = e.target.value; if (S.currentArtifacts) renderArtifacts(S.currentArtifacts); };
+
+  $("auto-refresh-toggle").onchange = (e) => {
+    S.autoRefresh = e.target.checked;
     setupAutoRefresh();
-    notify(state.autoRefresh ? "자동 새로고침을 켰습니다." : "자동 새로고침을 껐습니다.");
+    notify(S.autoRefresh ? "Auto-refresh on" : "Auto-refresh off");
   };
+
+  setupAutoRefresh();
+  loadDashboard();
 }
 
-attachEvents();
-setupAutoRefresh();
-loadDashboard();
+init();

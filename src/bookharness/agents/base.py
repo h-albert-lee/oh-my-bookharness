@@ -4,12 +4,23 @@ from __future__ import annotations
 
 import json
 import re
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from bookharness.llm import LLMBackend, get_backend
 from bookharness.memory.loader import MemoryLoader
 from bookharness.utils.io import read_text
 from bookharness.utils.yaml_utils import load_yaml
+
+
+def _agent_name_from_class(cls: type) -> str:
+    """Derive a readable agent name from class name."""
+    name = cls.__name__
+    # ChiefEditorAgent -> chief_editor
+    name = name.replace("Agent", "")
+    parts = re.findall(r"[A-Z][a-z]*", name)
+    return "_".join(p.lower() for p in parts) if parts else name.lower()
 
 
 class BaseAgent:
@@ -22,12 +33,43 @@ class BaseAgent:
         self.root = root
         self.backend = backend or get_backend()
         self._loader = MemoryLoader(root)
+        self._agent_name = _agent_name_from_class(type(self))
 
     # --- LLM call ---
 
     def _call_llm(self, system: str, user: str, *, max_tokens: int | None = None) -> str:
-        """Call the LLM backend. Always."""
-        return self.backend.generate(system, user, max_tokens=max_tokens)
+        """Call the LLM backend. Always. Logs the call to agent_logs.jsonl."""
+        start = time.time()
+        error_msg = None
+        response = ""
+        try:
+            response = self.backend.generate(system, user, max_tokens=max_tokens)
+            return response
+        except Exception as exc:
+            error_msg = str(exc)
+            raise
+        finally:
+            elapsed = round(time.time() - start, 2)
+            self._write_agent_log(
+                system_prompt_preview=system[:200],
+                user_prompt_preview=user[:500],
+                response_preview=response[:500] if response else "",
+                elapsed_sec=elapsed,
+                error=error_msg,
+                max_tokens=max_tokens,
+            )
+
+    def _write_agent_log(self, **fields: object) -> None:
+        """Append a structured log entry to workflow/agent_logs.jsonl."""
+        log_path = self.root / "workflow/agent_logs.jsonl"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "agent": self._agent_name,
+            **fields,
+        }
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     def _parse_json_response(self, text: str) -> dict | None:
         """Extract JSON from LLM response (handles ```json fences)."""

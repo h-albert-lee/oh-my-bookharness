@@ -22,15 +22,25 @@ class ChiefEditorAgent(BaseAgent):
 
         ch_deps = ctx.get("chapter_dependencies", {})
         ch_info = ch_deps.get(chapter_id, {}) if isinstance(ch_deps, dict) else {}
-        introduces = ch_info.get("introduces", []) if isinstance(ch_info, dict) else []
-        depends_on = ch_info.get("depends_on", []) if isinstance(ch_info, dict) else []
-        required_by = ch_info.get("required_by", []) if isinstance(ch_info, dict) else []
+        if isinstance(ch_info, dict):
+            introduces = ch_info.get("introduces", [])
+            depends_on = ch_info.get("depends_on", [])
+            required_by = ch_info.get("required_by", [])
+            expected_pages = ch_info.get("expected_pages", 20)
+            ch_note = ch_info.get("note", "")
+        else:
+            introduces, depends_on, required_by = [], [], []
+            expected_pages = 20
+            ch_note = ""
 
         user_prompt = f"""다음 장에 대한 chapter brief를 작성하라.
 
 ## 장 정보
 - chapter_id: {chapter_id}
 - 제목: {title}
+- 예상 분량: {expected_pages}쪽 (46배변형판 기준, 쪽당 약 500자)
+- 총 예상 글자 수: 약 {expected_pages * 500}자
+- 장 메모: {ch_note}
 - 의존 장: {deps_block}
 - 이 장이 도입하는 개념: {', '.join(introduces) if introduces else '미정'}
 - 이 장이 의존하는 개념: {', '.join(depends_on) if depends_on else '없음'}

@@ -3,191 +3,262 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>bookharness dashboard</title>
+    <title>BookHarness</title>
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
     <div class="layout">
       <aside class="sidebar">
-        <h1>bookharness</h1>
-        <p class="subtle">Agent Workflow Console</p>
-        <button id="nav-dashboard" class="nav-button active">Dashboard</button>
-        <button id="nav-approval" class="nav-button">Approvals</button>
-        <button id="nav-create" class="nav-button">Create Chapter</button>
-        <div class="sidebar-note">
-          <p>사용성 + 관찰성 중심 UI로 개선된 운영 콘솔입니다.</p>
+        <div class="sidebar-brand">
+          <div class="brand-icon">B</div>
+          <div>
+            <h1>BookHarness</h1>
+            <p class="brand-sub">Writing Pipeline Console</p>
+          </div>
+        </div>
+        <nav class="sidebar-nav">
+          <button id="nav-dashboard" class="nav-btn active">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            Dashboard
+          </button>
+          <button id="nav-approval" class="nav-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            Approvals
+            <span id="approval-badge" class="nav-badge hidden">0</span>
+          </button>
+          <button id="nav-create" class="nav-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            New Chapter
+          </button>
+          <button id="nav-logs" class="nav-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Agent Logs
+          </button>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="auto-refresh-row">
+            <label class="toggle-label">
+              <input type="checkbox" id="auto-refresh-toggle" checked />
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="subtle">Auto-refresh</span>
+          </div>
         </div>
       </aside>
 
       <main class="content">
-        <header class="global-toolbar">
-          <div>
-            <strong>운영 상태</strong>
-            <p id="global-status" class="subtle">데이터를 불러오는 중...</p>
-          </div>
-          <div class="button-row wrap">
-            <label class="inline-check"><input type="checkbox" id="auto-refresh-toggle" checked /> 15초 자동 새로고침</label>
-            <button id="global-refresh" class="primary">전체 새로고침</button>
-          </div>
-        </header>
-
+        <!-- DASHBOARD -->
         <section id="view-dashboard" class="view active">
-          <header class="page-header">
+          <div class="view-header">
             <div>
-              <h2>프로젝트 대시보드</h2>
-              <p id="project-title" class="subtle"></p>
+              <h2 id="project-title">Project Dashboard</h2>
+              <p id="global-status" class="subtle">Loading...</p>
             </div>
-            <p id="dashboard-updated" class="subtle"></p>
-          </header>
+            <button id="global-refresh" class="btn btn-ghost">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              Refresh
+            </button>
+          </div>
 
-          <div id="metrics" class="metrics-grid"></div>
+          <div id="metrics" class="metrics-row"></div>
 
-          <section class="panel">
-            <div class="panel-title-row">
-              <h3>Chapter 운영 현황</h3>
-              <div class="form-inline">
-                <input id="chapter-search" placeholder="chapter id / 제목 검색" />
-                <select id="chapter-status-filter">
-                  <option value="all">모든 상태</option>
+          <div class="card">
+            <div class="card-header">
+              <h3>Chapters</h3>
+              <div class="filter-bar">
+                <input id="chapter-search" class="input-sm" placeholder="Search chapters..." />
+                <select id="chapter-status-filter" class="input-sm">
+                  <option value="all">All statuses</option>
                 </select>
               </div>
             </div>
-            <table>
-              <thead>
-                <tr><th>Chapter</th><th>Status</th><th>Stage Progress</th><th>Draft</th><th></th></tr>
-              </thead>
-              <tbody id="chapter-table"></tbody>
-            </table>
-          </section>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Chapter</th><th>Status</th><th>Progress</th><th>Draft</th><th></th></tr>
+                </thead>
+                <tbody id="chapter-table"></tbody>
+              </table>
+            </div>
+          </div>
 
-          <div class="panel-grid two-equal">
-            <section class="panel">
-              <h3>승인 대기</h3>
-              <div id="pending-approvals"></div>
-            </section>
-            <section class="panel">
-              <h3>최근 실행 Job (Agent 관찰)</h3>
-              <div id="recent-runs"></div>
-            </section>
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header"><h3>Pending Approvals</h3></div>
+              <div id="pending-approvals" class="card-body"></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>Recent Jobs</h3></div>
+              <div id="recent-runs" class="card-body"></div>
+            </div>
           </div>
         </section>
 
+        <!-- APPROVALS -->
         <section id="view-approvals" class="view">
-          <header class="page-header">
+          <div class="view-header">
             <div>
               <h2>Approval Queue</h2>
-              <p class="subtle">대기중 Approval을 우선순위 기반으로 처리하세요.</p>
+              <p class="subtle">Review and approve pending items</p>
             </div>
-            <button id="refresh-approvals" class="primary">새로고침</button>
-          </header>
+            <button id="refresh-approvals" class="btn btn-ghost">Refresh</button>
+          </div>
           <div id="approval-queue"></div>
         </section>
 
+        <!-- CREATE CHAPTER -->
         <section id="view-create" class="view">
-          <header class="page-header">
+          <div class="view-header">
             <div>
-              <h2>새 장 생성</h2>
-              <p class="subtle">Chapter를 생성하고 파이프라인을 시작합니다.</p>
+              <h2>Create Chapter</h2>
+              <p class="subtle">Initialize a new chapter and start the pipeline</p>
             </div>
-          </header>
-          <form id="create-chapter-form" class="panel form-panel">
-            <label>Chapter ID<input name="chapter_id" placeholder="ch01" required /></label>
-            <label>Title<input name="title" placeholder="데모는 되는데 왜 운영은 어려울까" required /></label>
-            <label>Dependencies<input name="dependencies" placeholder="ch00_blueprint, system_vs_model" /></label>
-            <label>Actor<input name="actor" placeholder="editor" value="editor" /></label>
-            <button type="submit" class="primary">장 생성</button>
+          </div>
+          <form id="create-chapter-form" class="card form-card">
+            <div class="form-group">
+              <label>Chapter ID</label>
+              <input name="chapter_id" placeholder="ch03" required />
+            </div>
+            <div class="form-group">
+              <label>Title</label>
+              <input name="title" placeholder="문제는 모델이 아니라 시스템이다" required />
+            </div>
+            <div class="form-group">
+              <label>Dependencies</label>
+              <input name="dependencies" placeholder="ch01, ch02" />
+            </div>
+            <div class="form-group">
+              <label>Actor</label>
+              <input name="actor" placeholder="editor" value="editor" />
+            </div>
+            <button type="submit" class="btn btn-primary">Create Chapter</button>
           </form>
         </section>
 
-        <section id="view-chapter" class="view">
-          <header class="page-header sticky">
+        <!-- AGENT LOGS -->
+        <section id="view-logs" class="view">
+          <div class="view-header">
             <div>
-              <h2 id="chapter-heading">장 상세</h2>
+              <h2>Agent Logs</h2>
+              <p class="subtle">LLM call history across all agents</p>
+            </div>
+            <div class="btn-group">
+              <select id="log-agent-filter" class="input-sm">
+                <option value="">All agents</option>
+              </select>
+              <button id="refresh-logs" class="btn btn-ghost">Refresh</button>
+            </div>
+          </div>
+          <div id="agent-log-list"></div>
+        </section>
+
+        <!-- CHAPTER DETAIL -->
+        <section id="view-chapter" class="view">
+          <div class="view-header sticky">
+            <div>
+              <button id="back-dashboard" class="btn btn-ghost btn-sm">&larr; Back</button>
+              <h2 id="chapter-heading">Chapter Detail</h2>
               <p id="chapter-meta" class="subtle"></p>
             </div>
-            <div class="button-row">
-              <button id="back-dashboard">대시보드로</button>
-              <button id="refresh-chapter" class="primary">새로고침</button>
+            <div class="btn-group">
+              <button id="run-mvp-btn" class="btn btn-primary">Run Full Pipeline</button>
+              <button id="refresh-chapter" class="btn btn-ghost">Refresh</button>
             </div>
-          </header>
+          </div>
 
-          <div class="chapter-layout">
-            <aside class="panel chapter-sidebar">
-              <h3>Workflow Navigator</h3>
-              <div id="stage-progress"></div>
-              <hr />
-              <h3>Workflow Actions</h3>
-              <div class="button-row wrap" id="stage-actions"></div>
-            </aside>
-
-            <div class="chapter-main">
-              <div class="panel-grid two-equal">
-                <section class="panel">
-                  <div class="panel-title-row">
-                    <h3>Artifacts</h3>
-                    <input id="artifact-search" placeholder="artifact 검색" />
+          <div class="chapter-grid">
+            <!-- Left: Pipeline -->
+            <div class="chapter-left">
+              <div class="card">
+                <div class="card-header"><h3>Pipeline</h3></div>
+                <div id="stage-progress" class="card-body"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>Quick Actions</h3></div>
+                <div id="stage-actions" class="card-body action-grid"></div>
+              </div>
+              <div class="card">
+                <div class="card-header"><h3>Approval</h3></div>
+                <form id="approval-form" class="card-body">
+                  <div class="form-group">
+                    <label>Gate</label>
+                    <select name="approval_key">
+                      <option value="approval_a">Outline Approval (A)</option>
+                      <option value="approval_b">Draft Approval (B)</option>
+                    </select>
                   </div>
-                  <div id="artifact-list"></div>
-                </section>
-                <section class="panel">
-                  <h3>Approval</h3>
-                  <form id="approval-form" class="form-panel compact">
-                    <label>Approval Key
-                      <select name="approval_key">
-                        <option value="approval_a">approval_a</option>
-                        <option value="approval_b">approval_b</option>
-                      </select>
-                    </label>
-                    <label>Result
-                      <select name="result">
-                        <option value="approved">approved</option>
-                        <option value="approved_with_notes">approved_with_notes</option>
-                        <option value="revision_requested">revision_requested</option>
-                        <option value="rejected">rejected</option>
-                      </select>
-                    </label>
-                    <label>Actor<input name="actor" value="editor_in_chief" /></label>
-                    <label>Notes<textarea name="notes" rows="4" placeholder="한 줄에 하나씩 입력"></textarea></label>
-                    <button type="submit" class="primary">승인 제출</button>
-                  </form>
-                </section>
+                  <div class="form-group">
+                    <label>Decision</label>
+                    <select name="result">
+                      <option value="approved">Approved</option>
+                      <option value="approved_with_notes">Approved with Notes</option>
+                      <option value="revision_requested">Revision Requested</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>Actor</label>
+                    <input name="actor" value="editor_in_chief" />
+                  </div>
+                  <div class="form-group">
+                    <label>Notes</label>
+                    <textarea name="notes" rows="3" placeholder="One note per line"></textarea>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-full">Submit Approval</button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Right: Content -->
+            <div class="chapter-right">
+              <div class="card">
+                <div class="card-header">
+                  <h3>Artifacts</h3>
+                  <input id="artifact-search" class="input-sm" placeholder="Filter artifacts..." />
+                </div>
+                <div id="artifact-list" class="artifact-chips"></div>
               </div>
 
-              <div class="panel-grid two-equal">
-                <section class="panel">
-                  <h3>Draft / Artifact Viewer</h3>
-                  <div class="viewer-toolbar">
-                    <button id="toggle-render" class="secondary">Rendered / Raw</button>
-                    <p id="active-artifact" class="subtle"></p>
+              <div class="card card-viewer">
+                <div class="card-header">
+                  <h3>
+                    <span id="active-artifact" class="subtle">No artifact selected</span>
+                  </h3>
+                  <div class="btn-group">
+                    <button id="toggle-render" class="btn btn-ghost btn-sm">Raw / Rendered</button>
                   </div>
-                  <div id="artifact-viewer" class="artifact-viewer"></div>
-                </section>
-                <section class="panel">
+                </div>
+                <div id="artifact-viewer" class="viewer-body"></div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
                   <h3>Diff Viewer</h3>
-                  <div class="form-inline">
-                    <select id="diff-left"></select>
-                    <select id="diff-right"></select>
-                    <button id="load-diff" class="secondary">Diff 보기</button>
-                  </div>
-                  <div id="diff-viewer" class="artifact-viewer"></div>
-                </section>
+                </div>
+                <div class="diff-controls">
+                  <select id="diff-left" class="input-sm"></select>
+                  <span class="subtle">vs</span>
+                  <select id="diff-right" class="input-sm"></select>
+                  <button id="load-diff" class="btn btn-ghost btn-sm">Compare</button>
+                </div>
+                <div id="diff-viewer" class="viewer-body"></div>
               </div>
 
-              <div class="panel-grid two-equal">
-                <section class="panel">
-                  <h3>Agent Run Timeline</h3>
-                  <div id="chapter-runs"></div>
-                </section>
-                <section class="panel">
-                  <h3>Audit Timeline</h3>
-                  <div id="chapter-audit"></div>
-                </section>
+              <div class="grid-2">
+                <div class="card">
+                  <div class="card-header"><h3>Job Timeline</h3></div>
+                  <div id="chapter-runs" class="card-body"></div>
+                </div>
+                <div class="card">
+                  <div class="card-header"><h3>Audit Log</h3></div>
+                  <div id="chapter-audit" class="card-body"></div>
+                </div>
               </div>
 
-              <section class="panel">
-                <h3>Review Reports</h3>
-                <div id="review-cards"></div>
-              </section>
+              <div class="card">
+                <div class="card-header"><h3>Review Reports</h3></div>
+                <div id="review-cards" class="card-body"></div>
+              </div>
             </div>
           </div>
         </section>
@@ -195,6 +266,9 @@
     </div>
 
     <div id="toast" class="toast hidden"></div>
+    <div id="loading-overlay" class="loading-overlay hidden">
+      <div class="spinner"></div>
+    </div>
     <script src="/static/app.js" defer></script>
   </body>
 </html>

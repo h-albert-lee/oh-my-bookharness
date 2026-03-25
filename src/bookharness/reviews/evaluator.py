@@ -14,6 +14,7 @@ from pathlib import Path
 from bookharness.memory.loader import MemoryLoader
 from bookharness.models.review_report import ReviewReport
 from bookharness.utils.io import read_json, read_text, write_json, write_text
+from bookharness.utils.yaml_utils import load_yaml
 
 
 # Patterns for binary gate checks
@@ -43,10 +44,64 @@ class BinaryGateChecker:
         has_unsupported = self._has_patterns_without_refs(draft, ABSOLUTE_PATTERNS)
         has_source_refs = bool(re.search(r"\[\^", draft))
         word_count = len(draft.split())
+
+        # Citation verification: check if cited source_ids exist in the bundle
+        citation_result = self._verify_citations(chapter_id, draft)
+
         return {
             "has_unsupported_claims": has_unsupported,
             "has_source_references": has_source_refs,
             "meets_minimum_length": word_count >= 500,
+            "all_citations_valid": citation_result["all_valid"],
+        }
+
+    def _verify_citations(self, chapter_id: str, draft: str) -> dict:
+        """Verify that all [^source_id] citations in the draft reference real sources."""
+        # Extract all cited source IDs from the draft
+        cited_ids = set(re.findall(r"\[\^(\w+)\]", draft))
+        if not cited_ids:
+            return {"all_valid": True, "details": "No citations found in draft."}
+
+        # Load known source IDs from bundle + registry
+        known_ids = set()
+
+        # From chapter bundle
+        bundle_path = self.root / f"sources/chapter_packs/{chapter_id}/bundle.yaml"
+        if bundle_path.exists():
+            bundle = load_yaml(bundle_path) or {}
+            for key in ("core_sources", "supporting_sources"):
+                for src in bundle.get(key, []):
+                    sid = src.get("source_id") or src.get("id", "")
+                    if sid:
+                        known_ids.add(sid)
+
+        # From global registry
+        registry_path = self.root / "sources/metadata/registry.yaml"
+        if registry_path.exists():
+            registry = load_yaml(registry_path) or []
+            if isinstance(registry, list):
+                for src in registry:
+                    sid = src.get("id", "")
+                    if sid:
+                        known_ids.add(sid)
+
+        # Check for normalized source files
+        norm_dir = self.root / "sources/normalized"
+        if norm_dir.exists():
+            for f in norm_dir.glob("*.md"):
+                known_ids.add(f.stem)
+
+        # Verify
+        valid_ids = cited_ids & known_ids
+        invalid_ids = cited_ids - known_ids
+
+        details = f"Cited: {len(cited_ids)}, Valid: {len(valid_ids)}, Invalid: {len(invalid_ids)}"
+        if invalid_ids:
+            details += f"\nUnknown sources: {', '.join(sorted(invalid_ids))}"
+
+        return {
+            "all_valid": len(invalid_ids) == 0,
+            "details": details,
         }
 
     def _check_style(self, draft: str) -> dict[str, bool]:

@@ -21,6 +21,8 @@ class SourceAnalystAgent(BaseAgent):
 
         for item in all_sources:
             sid = item.get("source_id", "")
+            if not sid:
+                continue
             raw_content = self._load_raw_source(sid)
             self._create_note(sid, chapter_id, item, raw_content, brief, context_block)
 

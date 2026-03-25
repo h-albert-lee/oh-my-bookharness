@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from bookharness.utils.io import read_text
+from bookharness.utils.io import read_text, write_text
 from bookharness_api.services.helpers import ensure_within_root, markdown_to_html, to_iso
 
 
@@ -31,6 +31,11 @@ class ArtifactService:
             "rendered_html": rendered_html,
             "modified_at": to_iso(path.stat().st_mtime),
         }
+
+    def save_artifact(self, relative_path: str, content: str) -> dict[str, Any]:
+        path = ensure_within_root(self.root, self.root / relative_path)
+        write_text(path, content)
+        return self.read_artifact(relative_path)
 
     def diff(self, left_path: str, right_path: str) -> dict[str, Any]:
         left = self.read_artifact(left_path)
