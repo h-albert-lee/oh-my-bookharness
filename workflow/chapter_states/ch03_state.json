@@ -1,0 +1,111 @@
+{
+  "chapter_id": "ch03",
+  "title": "문제는 모델이 아니라 시스템이다",
+  "status": "awaiting_human_draft_approval",
+  "current_stage": "draft_revision",
+  "approved": false,
+  "source_pack_ready": true,
+  "outline_ready": true,
+  "draft_versions": [
+    "draft_v3.md",
+    "draft_v4.md"
+  ],
+  "latest_draft": "draft_v4.md",
+  "review_reports": [
+    "review_technical_v1.md",
+    "review_style_v1.md",
+    "review_continuity_v1.md"
+  ],
+  "revision_plan": "revision_plan_v2.md",
+  "human_feedback": [],
+  "gate_passed": false,
+  "gate_details": {
+    "passed": false,
+    "total_must_fix": 10,
+    "details": [
+      {
+        "review_type": "technical",
+        "must_fix_count": 3,
+        "score_checks": {
+          "technical_accuracy": {
+            "score": 3,
+            "threshold": 4,
+            "passed": false
+          },
+          "source_grounding": {
+            "score": 3,
+            "threshold": 4,
+            "passed": false
+          },
+          "clarity": {
+            "score": 4,
+            "threshold": 4,
+            "passed": true
+          }
+        },
+        "passed": false
+      },
+      {
+        "review_type": "style",
+        "must_fix_count": 4,
+        "score_checks": {
+          "tone_fit": {
+            "score": 3,
+            "threshold": 4,
+            "passed": false
+          },
+          "reader_friendliness": {
+            "score": 4,
+            "threshold": 4,
+            "passed": true
+          },
+          "redundancy": {
+            "score": 3,
+            "threshold": 4,
+            "passed": false
+          }
+        },
+        "passed": false
+      },
+      {
+        "review_type": "continuity",
+        "must_fix_count": 3,
+        "score_checks": {
+          "continuity": {
+            "score": 3,
+            "threshold": 4,
+            "passed": false
+          },
+          "dependency_coverage": {
+            "score": 2,
+            "threshold": 4,
+            "passed": false
+          }
+        },
+        "passed": false
+      }
+    ]
+  },
+  "open_issues": [],
+  "dependencies": [],
+  "artifacts": {
+    "brief": "manuscript/ch03/brief.md",
+    "change_log_v2": "manuscript/ch03/change_log_v2.md",
+    "draft_v1": "manuscript/ch03/draft_v1.md",
+    "draft_v2": "manuscript/ch03/draft_v2.md",
+    "outline": "manuscript/ch03/outline.md",
+    "review_continuity_v1": "manuscript/ch03/review_continuity_v1.md",
+    "review_style_v1": "manuscript/ch03/review_style_v1.md",
+    "review_technical_v1": "manuscript/ch03/review_technical_v1.md",
+    "revision_plan_v1": "manuscript/ch03/revision_plan_v1.md",
+    "source_bundle": "sources/chapter_packs/ch03/bundle.yaml",
+    "source_counterpoints": "sources/chapter_packs/ch03/counterpoints.md",
+    "source_must_cite": "sources/chapter_packs/ch03/must_cite.md",
+    "source_notes": "sources/chapter_packs/ch03/notes.md",
+    "draft_v3": "manuscript/ch03/draft_v3.md",
+    "revision_plan_v2": "manuscript/ch03/revision_plan_v2.md",
+    "change_log_v4": "manuscript/ch03/change_log_v4.md",
+    "draft_v4": "manuscript/ch03/draft_v4.md"
+  },
+  "last_updated": "2026-03-29T00:36:23Z"
+}

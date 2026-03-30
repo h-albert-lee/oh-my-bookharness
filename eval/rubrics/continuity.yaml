@@ -1,0 +1,4 @@
+continuity:
+  scale: 1-5
+redundancy:
+  scale: 1-5

@@ -1,0 +1,42 @@
+harness:
+  preferred_korean: 평가 하네스
+  definition: 반복 가능하게 실행과 평가를 수행하는 외부 구조
+  notes:
+  - 첫 등장 시 쉬운 설명을 덧붙인다
+edd:
+  preferred_korean: 평가 주도 개발(EDD)
+  definition: 테스트 코드 대신 평가자(Evaluator)와 하네스를 먼저 설계하는 개발 방법론
+  notes:
+  - Evaluation-Driven Development
+  - TDD와 대비하여 설명
+tdd:
+  preferred_korean: 테스트 주도 개발(TDD)
+  definition: 테스트 코드를 먼저 작성하는 전통적 개발 방법론
+  notes:
+  - AI 시스템에서의 한계를 설명하기 위해 등장
+nondeterminism:
+  preferred_korean: 비결정성
+  definition: 동일한 입력에도 다른 출력이 나오는 AI 시스템의 본질적 특성
+  notes:
+  - 확률론적 세계라고도 표현
+rag:
+  preferred_korean: RAG
+  definition: 검색 증강 생성. 정보 흐름을 통제하는 시스템 아키텍처로 재해석
+  notes:
+  - Retrieval-Augmented Generation
+  - 단순 검색 기능이 아닌 아키텍처로 설명
+guardrail:
+  preferred_korean: 가드레일
+  definition: AI 시스템의 출력과 행동을 통제하기 위한 안전 구조
+  notes:
+  - 정책 엔진, 권한 관리, 안전 계층 포함
+observability:
+  preferred_korean: 관찰 가능성(Observability)
+  definition: 시스템의 동작을 관찰하고 문제를 추적하기 위한 구조
+  notes:
+  - 로그, 트레이싱, 메트릭 포함
+llm_as_judge:
+  preferred_korean: LLM-as-a-Judge
+  definition: LLM을 평가자로 활용하는 자동 평가 방식
+  notes:
+  - 단위 테스트를 대체하는 평가 메트릭으로 소개

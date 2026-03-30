@@ -1,0 +1,21 @@
+clarity:
+  description: 독자가 문단과 섹션 흐름을 쉽게 따라갈 수 있는가
+  scale: 1-5
+technical_accuracy:
+  description: 기술 설명이 부정확하거나 과장되지 않았는가
+  scale: 1-5
+source_grounding:
+  description: 핵심 주장들이 source pack에 의해 뒷받침되는가
+  scale: 1-5
+tone_fit:
+  description: 책 전체 기술서 톤과 부합하는가
+  scale: 1-5
+continuity:
+  description: 앞뒤 장 연결성이 자연스러운가
+  scale: 1-5
+reader_friendliness:
+  description: 과도하게 추상적이거나 위압적이지 않은가
+  scale: 1-5
+redundancy:
+  description: 불필요한 반복이 적절히 제어되는가
+  scale: 1-5

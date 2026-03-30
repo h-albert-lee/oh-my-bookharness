@@ -1,0 +1,60 @@
+ch01:
+  depends_on: []
+  expected_pages: 16
+  note: "도입부. 데모 vs 운영 괴리, 하네스 부재 화두"
+ch02:
+  depends_on: [ch01]
+  expected_pages: 20
+  note: "TDD→EDD 전환. 결정론 vs 확률론, 새 방법론 선언"
+ch03:
+  depends_on: [ch01, ch02]
+  expected_pages: 18
+  note: "모델이 아니라 시스템. PART 1 마무리"
+ch04:
+  depends_on: [ch03]
+  expected_pages: 22
+  note: "LLM 파이프라인 기본 구성 요소"
+ch05:
+  depends_on: [ch04]
+  expected_pages: 22
+  note: "RAG를 아키텍처로 재해석"
+ch06:
+  depends_on: [ch04]
+  expected_pages: 22
+  note: "멀티 에이전트를 시스템 구조로"
+ch07:
+  depends_on: [ch03]
+  expected_pages: 18
+  note: "잘 동작하는 AI vs 신뢰할 수 있는 AI 시스템"
+ch08:
+  depends_on: [ch07]
+  expected_pages: 20
+  note: "AI 위험을 설계 가능한 문제로"
+ch09:
+  depends_on: [ch08]
+  expected_pages: 22
+  note: "가드레일과 정책 기반 설계"
+ch10:
+  depends_on: [ch03]
+  expected_pages: 18
+  note: "테스트로는 부족한 이유"
+ch11:
+  depends_on: [ch10]
+  expected_pages: 22
+  note: "AI 시스템 평가 설계"
+ch12:
+  depends_on: [ch11]
+  expected_pages: 22
+  note: "운영 단계 평가 루프"
+ch13:
+  depends_on: [ch06, ch09, ch12]
+  expected_pages: 22
+  note: "평가 가능한 시스템 패턴"
+ch14:
+  depends_on: [ch13]
+  expected_pages: 20
+  note: "Observability 패턴"
+ch15:
+  depends_on: [ch13]
+  expected_pages: 20
+  note: "도메인 특화 아키텍처. 마무리"

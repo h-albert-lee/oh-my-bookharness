@@ -1,0 +1,74 @@
+- id: ai_system_design_book_plan
+  title: "AI 시스템 설계 - 집필 기획안"
+  type: planning_doc
+  author: 김민경
+  published_at: "2026-03-09"
+  authority: high
+  source_kind: internal
+  topic_tags:
+  - ai_system_design
+  - book_planning
+  - market_analysis
+  relevance_tags: []
+  status: active
+  url: null
+  local_path: sources/raw/docs/ai_system_design_book_plan.md
+  citation_priority: background
+  claims_supported:
+  - 도서 콘셉트 및 목차 구성
+  - 대상 독자 정의
+  - 시장 분석 및 경쟁서 비교
+  caution_notes: []
+  review_status: reviewed
+
+- id: ai_system_design_ch1_ch2_plan
+  title: "AI 시스템 설계 - 1, 2장 세부 기획안 (EDD 및 하네스 관점 반영)"
+  type: planning_doc
+  author: 이한울
+  published_at: "2026-03-09"
+  authority: high
+  source_kind: internal
+  topic_tags:
+  - edd
+  - harness
+  - tdd
+  - nondeterminism
+  relevance_tags:
+  - ch01
+  - ch02
+  status: active
+  url: null
+  local_path: sources/raw/docs/ai_system_design_ch1_ch2_plan.md
+  citation_priority: must_cite
+  claims_supported:
+  - 하네스 부재가 AI 운영 실패의 핵심 원인
+  - TDD에서 EDD로의 패러다임 전환 논거
+  - 코딩 에이전트 사례를 통한 하네스 중요성
+  - 결정론적 vs 확률론적 세계의 차이
+  caution_notes: []
+  review_status: reviewed
+
+- id: ch01_author_draft_intro
+  title: "1장 저자 사전 초안 - 데모는 되는데, 왜 운영은 어려울까"
+  type: author_draft
+  author: 이한울
+  published_at: "2026-03-24"
+  authority: high
+  source_kind: internal
+  topic_tags:
+  - demo_vs_production
+  - nondeterminism
+  - system_design
+  relevance_tags:
+  - ch01
+  status: active
+  url: null
+  local_path: sources/raw/docs/ch01_author_draft_intro.md
+  citation_priority: must_cite
+  claims_supported:
+  - 데모 성공과 운영 안정성은 전혀 다른 문제
+  - AI 시스템 실패 원인은 단일 코드가 아닌 복합적 요인
+  - 모델 성능만이 아닌 전체 시스템 설계가 필요
+  caution_notes:
+  - 저자가 직접 작성한 도입부 초안으로, 톤과 방향의 기준이 됨
+  review_status: reviewed

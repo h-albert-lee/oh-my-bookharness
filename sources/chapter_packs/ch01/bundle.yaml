@@ -1,0 +1,273 @@
+chapter_id: ch01
+chapter_title: 'AI는 왜 항상 데모까지만 잘 되는가: ''하네스(Harness)''의 부재'
+core_sources:
+- source_id: ai_system_design_ch1_ch2_plan
+  type: local
+  title: AI 시스템 설계 - 1, 2장 세부 기획안 (EDD 및 하네스 관점 반영)
+  authority: high
+  quality_score: 5
+  relevance: '이 장의 핵심 개념(하네스, 비결정성, 데모-운영 괴리)의 구조와 논증 흐름이 직접 담긴 1차 기획 문서. 개념 도입 순서,
+    피해야 할 오해 목록, ch02 연결 방향까지 포함하여 집필 시 가장 우선 참조해야 할 내부 자료.
+
+    '
+- source_id: ch01_author_draft_intro
+  type: local
+  title: 1장 저자 사전 초안 - 데모는 되는데, 왜 운영은 어려울까
+  authority: high
+  quality_score: 5
+  relevance: '저자가 직접 작성한 1장 초안으로, 도입부 장면 묘사 톤과 비결정성·하네스 개념을 처음 풀어내는 방식이 담겨 있다. 원고
+    집필 시 톤·구조의 기준선으로 활용.
+
+    '
+- source_id: web_01
+  type: web
+  title: Hidden Technical Debt in Machine Learning Systems
+  authors:
+  - D. Sculley
+  - Gary Holt
+  - Daniel Golovin
+  - Eugene Davydov
+  - Todd Phillips
+  - Dietmar Ebner
+  - Vinay Chaudhary
+  - Michael Young
+  - Jean-François Crespo
+  - Dan Dennison
+  year: 2015
+  url: https://proceedings.neurips.cc/paper_files/paper/2015/hash/86df7dcfd896fcaf2674f757a2463eba-Abstract.html
+  quality_score: 5
+  relevance: '"ML 시스템에서 실제 ML 코드는 ~5%, 나머지 95%는 인프라"라는 핵심 수치의 원출처. 데모 이후 붕괴의 구조적 원인(경계
+    침식, 숨겨진 피드백 루프, 데이터 의존성)을 시스템 기술 부채 개념으로 규명. ''모델이 아닌 시스템 부재'' 재정의를 뒷받침하는 가장 권위
+    있는 학술 근거.
+
+    '
+- source_id: web_02
+  type: web
+  title: The Root Causes of Failure for Artificial Intelligence Projects and How They
+    Can Succeed
+  authors:
+  - James Ryseff
+  - Brandon F. De Bruhl
+  - Sydne J. Newberry
+  year: 2024
+  url: https://www.rand.org/pubs/research_reports/RRA2680-1.html
+  quality_score: 5
+  relevance: '65명 인터뷰 기반의 RAND 보고서. "AI 프로젝트 80% 이상 실패, 비AI IT 대비 2배" 수치의 신뢰도 높은 출처.
+    실패 원인이 모델이 아닌 구조적 요인(문제 정의 오류, 인프라 부재)임을 실증. 도입부 충격 통계 및 ''귀인 오류'' 섹션의 핵심 레퍼런스.
+
+    '
+- source_id: web_03
+  type: web
+  title: Non-Determinism of "Deterministic" LLM Settings
+  authors:
+  - Berk Atil
+  - Sarp Aykent
+  - Alexa Chittams
+  - Lisheng Fu
+  - Rebecca J. Passonneau
+  - Evan Radcliffe
+  - Guru Rajan Rajagopal
+  - Adam Sloan
+  - Tomasz Tudrej
+  - Ferhan Ture
+  - et al.
+  year: 2024
+  url: https://arxiv.org/abs/2408.04667
+  quality_score: 5
+  relevance: 'temperature=0 설정에서도 LLM이 비결정적으로 동작함을 MMLU·BIG-Bench Hard 벤치마크로 실증한 논문.
+    "temperature를 0으로 하면 비결정성이 없어진다"는 오해를 해체하는 직접 근거. 비결정성 개념 섹션의 핵심 학술 인용.
+
+    '
+- source_id: web_04
+  type: web
+  title: An Empirical Study of the Non-Determinism of ChatGPT in Code Generation
+  authors:
+  - Shuyin Ouyang
+  - Jie M. Zhang
+  - Mark Harman
+  - Meng Wang
+  year: 2025
+  url: https://arxiv.org/abs/2308.02828
+  quality_score: 5
+  relevance: '829개 문제로 ChatGPT 비결정성을 정량 측정한 최초의 체계적 실증 연구. 기본 설정에서 75.76%(CodeContests)
+    비율로 동일 출력이 단 한 번도 나오지 않음. "같은 프롬프트, 다른 결과"가 측정 가능한 공학적 현실임을 독자에게 납득시키는 구체적 수치
+    근거. 비결정성 개념 도입의 실증 앵커.
+
+    '
+- source_id: web_05
+  type: web
+  title: Gartner Predicts 30% of Generative AI Projects Will Be Abandoned After Proof
+    of Concept By End of 2025
+  authors:
+  - Rita Sallam (Gartner)
+  year: 2024
+  url: https://www.gartner.com/en/newsroom/press-releases/2024-07-29-gartner-predicts-30-percent-of-generative-ai-projects-will-be-abandoned-after-proof-of-concept-by-end-of-2025
+  quality_score: 5
+  relevance: '"GenAI 프로젝트 30% 이상이 PoC 이후 폐기"의 공식 Gartner 출처. 폐기 이유(데이터 품질, 리스크 통제
+    부재, 불명확한 비즈니스 가치)가 모두 하네스(시스템) 부재를 가리킴. 도입부 통계 인용 빈도 1위 공식 자료.
+
+    '
+- source_id: web_06
+  type: web
+  title: Engineering Practices for LLM Application Development
+  authors:
+  - David Tan
+  - Jessie Wang
+  year: 2024
+  url: https://martinfowler.com/articles/engineering-practices-llm.html
+  quality_score: 5
+  relevance: 'Thoughtworks 팀의 실제 LLM 앱 구축 경험 기반. "LLM과 프롬프트는 프로덕션에 필요한 것의 극히 일부"라는
+    명제를 실무 사례로 뒷받침. martinfowler.com의 업계 권위를 활용. ''모델 성능이 아닌 시스템 설계 부재''를 실무 관점에서
+    지지.
+
+    '
+- source_id: web_07
+  type: web
+  title: 'AI Is Not a Library: Designing for Nondeterministic Dependencies'
+  authors:
+  - O'Reilly Radar
+  year: 2026
+  url: https://www.oreilly.com/radar/ai-is-not-a-library-designing-for-nondeterministic-dependencies/
+  quality_score: 4
+  relevance: '"소프트웨어 공학의 핵심 전제(동일 입력→동일 출력)를 AI가 조용히 깨뜨린다"는 프레이밍의 O''Reilly 블로그. 비결정성을
+    제거 대상이 아닌 ''억제·봉쇄'' 대상으로 재정의하는 관점 제시. 하네스 개념의 필요성을 자연스럽게 도출하는 아키텍처 논거.
+
+    '
+supporting_sources:
+- source_id: ai_system_design_book_plan
+  type: local
+  title: AI 시스템 설계 - 집필 기획안
+  authority: high
+  quality_score: 5
+  relevance: '책 전체의 논증 구조와 독자 프로파일 확인용. 1장이 PART 1의 출발점으로서 갖는 역할(문제 정의, 인식 전환)을 전체
+    맥락에서 검토할 때 참조.
+
+    '
+- source_id: web_08
+  type: web
+  title: 'The Agent Deployment Gap: Why Your LLM Loop Isn''t Production-Ready'
+  authors:
+  - ZenML Team
+  year: 2025
+  url: https://www.zenml.io/blog/the-agent-deployment-gap-why-your-llm-loop-isnt-production-ready-and-what-to-do-about-it
+  quality_score: 4
+  relevance: '에이전트 데모가 프로덕션에서 무한 루프·반복 응답으로 무너지는 구체적 사례(Toqan) 서술. 1장 도입부 "데모 성공 →
+    운영 실패" 장면을 현장감 있게 보조하는 실무 사례. "진짜 문제는 모델 추론 품질이 아닌 운영 인프라"를 보여주는 대표적 현장 증언.
+
+    '
+- source_id: web_09
+  type: web
+  title: What 1,200 Production Deployments Reveal About LLMOps in 2025
+  authors:
+  - ZenML Team
+  year: 2025
+  url: https://www.zenml.io/blog/what-1200-production-deployments-reveal-about-llmops-in-2025
+  quality_score: 4
+  relevance: '1,200건 실제 배포 분석. "프로덕션 성공팀은 프롬프트 품질이 아닌 시스템 엔지니어링 역량으로 정의된다"는 정량적 발견.
+    ''데모-운영 격차를 줄이려면 AI를 시스템으로 감싸야 한다''는 하네스 필요성을 지지.
+
+    '
+- source_id: web_10
+  type: web
+  title: 'Survey: Machine Learning Projects Still Routinely Fail to Deploy'
+  authors:
+  - Eric Siegel
+  - Karl Rexer
+  year: 2024
+  url: https://www.kdnuggets.com/survey-machine-learning-projects-still-routinely-fail-to-deploy
+  quality_score: 4
+  relevance: '데이터 과학자 328명 설문(2023 Rexer Analytics). "혁신적 ML 이니셔티브 배포 성공 22%, 전체 프로젝트
+    배포 성공 32%"라는 현장 실무자 시점의 수치. 도입부 통계를 RAND·Gartner와 다른 관점(실무자 응답)으로 보강.
+
+    '
+- source_id: web_11
+  type: web
+  title: 'AI Adoption in 2024: 74% of Companies Struggle to Achieve and Scale Value'
+  authors:
+  - Boston Consulting Group (BCG)
+  year: 2024
+  url: https://www.bcg.com/press/24october2024-ai-adoption-in-2024-74-of-companies-struggle-to-achieve-and-scale-value
+  quality_score: 4
+  relevance: '59개국 1,000명 CxO 조사. "74% 가시적 가치 미달성, 26%만 PoC 이상 성과". AI 리더의 자원 배분 ''70-20-10
+    규칙''(알고리즘 10%, 기술·데이터 20%, 사람·프로세스 70%)은 하네스(시스템·운영 구조)의 필요성을 설명하는 구체적 근거.
+
+    '
+- source_id: web_12
+  type: web
+  title: 'Operationalizing Machine Learning: An Interview Study'
+  authors:
+  - Shreya Shankar
+  - Rolando Garcia
+  - Joseph M. Hellerstein
+  - Aditya G. Parameswaran
+  year: 2022
+  url: https://arxiv.org/abs/2209.09125
+  quality_score: 4
+  relevance: 'ML 엔지니어 18명 심층 인터뷰. 프로덕션 성공의 3대 변수(Velocity·Validation·Versioning)가
+    ''있어야 했는데 없었던 시스템 구조''임을 현장 증언으로 보여줌. 귀인 오류 섹션에서 "모델 지표와 제품 지표의 단절"이 실패를 유발한다는
+    근거로 활용.
+
+    '
+- source_id: web_13
+  type: web
+  title: Defeating Nondeterminism in LLM Inference
+  authors:
+  - Horace He
+  - Thinking Machines Lab
+  year: 2025
+  url: https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/
+  quality_score: 4
+  relevance: 'temperature=0으로 1,000회 실행 시 80가지 고유 출력(최빈값 7.8%)이라는 극적인 실험 수치. ''비결정성이
+    우리가 믿었던 것보다 훨씬 심각하다''는 인식 전환의 생생한 사례. 비결정성 개념 박스 또는 각주에 독자 설득력 높은 수치로 활용.
+
+    '
+- source_id: web_14
+  type: web
+  title: Understanding and Mitigating Numerical Sources of Nondeterminism in LLM Inference
+  authors:
+  - Jiayi Yuan
+  - et al.
+  year: 2025
+  url: https://arxiv.org/abs/2506.09501
+  quality_score: 4
+  relevance: 'NeurIPS 2025 Oral. GPU 종류·배치 크기·수치 정밀도(FP16/BF16)만 바꿔도 정확도 최대 9% 변동.
+    ''개발자가 통제할 수 없는 인프라 변수로 인한 비결정성''을 설명. 비결정성의 원인이 모델 설계가 아닌 실행 환경임을 보여주는 기술적 심화
+    근거.
+
+    '
+- source_id: web_15
+  type: web
+  title: Probabilistic and Deterministic Systems
+  authors:
+  - Daniel Vaughan
+  year: 2025
+  url: https://decisionmatrix.substack.com/p/probabilistic-and-deterministic-systems
+  quality_score: 3
+  relevance: '결정론적 소프트웨어와 확률론적 AI 시스템의 차이를 개념적으로 명확히 구분하는 입문 수준 글. "전통적 단위 테스트가 AI에
+    작동하지 않는다"는 명제를 초급 독자 눈높이에서 설명. 비결정성 개념 도입 섹션의 보조 참고 자료. ch02 연결 복선으로도 활용.
+
+    '
+- source_id: web_16
+  type: web
+  title: 'The State of Generative AI in the Enterprise: Q4 2024'
+  authors:
+  - Deloitte AI Institute
+  year: 2024
+  url: https://www.deloitte.com/us/en/about/press-room/state-of-generative-ai.html
+  quality_score: 4
+  relevance: '14개국 2,773명 디렉터~C레벨 조사. "GenAI 실험의 30% 이하만 향후 전사 확장될 것" (2/3 이상 응답).
+    도입부 PoC-프로덕션 갭을 다각도 통계로 보강. Gartner·RAND와 함께 ''데모 성공 ≠ 운영 성공'' 현실을 삼각 검증하는 역할.
+
+    '
+- source_id: web_17
+  type: web
+  title: 'Challenges in Deploying Machine Learning: A Survey of Case Studies'
+  authors:
+  - Andrei Paleyes
+  - Raoul-Gabriel Urma
+  - Neil D. Lawrence
+  year: 2022
+  url: https://dl.acm.org/doi/full/10.1145/3533378
+  quality_score: 4
+  relevance: 다양한 산업의 ML 배포 사례 체계적 검토(ACM). 배포 실패가 모델 알고리즘이 아닌 통합·모니터링·갱신 단계에 집중된다는
+    실증적 발견. '데모 성공 ≠ 운영 성공'을 사례 기반으로 뒷받침하는 학술 서베이.

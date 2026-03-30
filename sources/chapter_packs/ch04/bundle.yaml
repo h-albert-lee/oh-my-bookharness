@@ -1,0 +1,307 @@
+chapter_id: ch04
+chapter_title: LLM 파이프라인 기본 구성 요소
+core_sources:
+- source_id: web_01
+  title: Emerging Architectures for LLM Applications
+  authors:
+  - Matt Bornstein
+  - Rajko Radovanovic
+  year: 2023
+  type: industry_report
+  url: https://a16z.com/emerging-architectures-for-llm-applications/
+  quality_score: 5
+  relevance: 'a16z가 실무 사례 기반으로 정리한 LLM 앱 스택 레퍼런스 아키텍처. 데이터 전처리/임베딩 → 프롬프트 구성/검색 →
+    LLM 호출 → 출력 처리라는 파이프라인 단계 분류가 ch04 구성 요소 정의의 권위 있는 산업계 근거로 직접 활용 가능. 출력 검증·프롬프트
+    인젝션 탐지가 별도 레이어가 되어야 한다는 주장도 인용 가능.
+
+    '
+- source_id: web_02
+  title: Building LLM Applications for Production
+  authors:
+  - Chip Huyen
+  year: 2023
+  type: blog_post
+  url: https://huyenchip.com/2023/04/11/llm-engineering.html
+  quality_score: 5
+  relevance: 'LLM 파이프라인을 프로덕션 수준으로 올리는 과정의 핵심 도전을 체계적으로 정리. "각 태스크를 독립적으로 빌드·테스트해야
+    신뢰 가능한 시스템이 된다"는 명제가 ch04 구성 요소 분리 논거의 핵심 근거. 순차/병렬/조건부 제어 흐름 분류는 파이프라인 흐름도 설명의
+    뼈대로 활용 가능. 저자 신뢰도 최상급.
+
+    '
+- source_id: web_03
+  title: Building Effective Agents
+  authors:
+  - Erik Schluntz
+  - Barry Zhang
+  year: 2024
+  type: blog_post
+  url: https://www.anthropic.com/research/building-effective-agents
+  quality_score: 5
+  relevance: 'Anthropic의 공식 설계 원칙 문서. ''증강된 LLM(augmented LLM)''이 모든 복잡한 시스템의 빌딩 블록이라는
+    개념은 ch04 파이프라인 구성 요소 정의의 출발점. 워크플로우 vs 에이전트의 아키텍처적 구분, 프레임워크 과도한 추상화의 위험성 경고는
+    ch04 톤 메모(프레임워크 종속 지양)와 일치.
+
+    '
+- source_id: web_04
+  title: 'From Prompts to Templates: A Systematic Prompt Template Analysis for Real-world
+    LLM apps'
+  authors:
+  - Yuetian Mao
+  - Junjie He
+  - Chunyang Chen
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2504.02052
+  quality_score: 4
+  relevance: '실제 오픈소스 LLM 앱에서 수집한 프롬프트 템플릿의 7가지 공통 구성 요소 (Role, Directive, Context,
+    Output Format 등)를 실증적으로 분류. ''프롬프트 구성기''가 왜 독립 설계 단위인지를 empirical 데이터로 뒷받침하는 유일한
+    학술 근거. 현재 프롬프트 설계가 개인 전문성과 시행착오에 의존한다는 비판은 ch04 문제 제기와 직접 연결.
+
+    '
+- source_id: web_05
+  title: 'The Architecture of LLM-Powered Applications: How It Differs from Conventional
+    Software Architecture'
+  authors:
+  - Craig Risi
+  year: 2025
+  type: blog_post
+  url: https://www.craigrisi.com/post/the-architecture-of-llm-powered-applications-how-it-differs-from-conventional-software-architecture
+  quality_score: 4
+  relevance: '기존 소프트웨어(결정론적·모듈식)와 LLM 기반 아키텍처의 구조적 차이를 분석. ch04 도입부의 핵심 논거인 "왜 LLM
+    시스템은 기존 소프트웨어와 다른 설계 단위를 필요로 하는가"를 뒷받침. 검증·필터링·후처리·폴백 레이어 필요성 논거는 구성 요소 분리 이유
+    절에서 직접 인용 가능.
+
+    '
+- source_id: web_06
+  title: 'Retries, Fallbacks, and Circuit Breakers in LLM Apps: A Production Guide'
+  authors:
+  - Maxim AI Editorial
+  year: 2026
+  type: blog_post
+  url: https://www.getmaxim.ai/articles/retries-fallbacks-and-circuit-breakers-in-llm-apps-a-production-guide/
+  quality_score: 4
+  relevance: '재시도(Retry)·폴백(Fallback)·서킷 브레이커(Circuit Breaker)를 독립적 장애 처리 패턴으로 체계화.
+    오류 처리기(Error Handler)가 왜 독립 설계 단위인지, "에러 처리 복잡성은 애플리케이션 로직이 아닌 별도 레이어에서 관리해야 한다"는
+    주장은 ch04 오류 처리기 절의 설계 근거로 직접 활용 가능.
+
+    '
+- source_id: web_07
+  title: 'Failure Modes in LLM Systems: A System-Level Taxonomy for Reliable AI Applications'
+  authors:
+  - Vaishali Vinay
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2511.19933
+  quality_score: 4
+  relevance: '프로덕션 LLM 시스템의 15가지 숨겨진 실패 유형을 시스템 엔지니어링 관점으로 분류. ch03의 "실패 원인이 시스템에
+    있다"는 주장을 ch04로 연결할 때, "파이프라인 어느 단계에서 어떤 실패가 발생하는가"를 독자가 예측하는 사고 습관을 기르도록 돕는 학술
+    근거. "LLM 신뢰성은 시스템 엔지니어링 문제" 라는 프레이밍이 책 전체 논지와 일치.
+
+    '
+- source_id: web_08
+  title: 'LLM Context Management: How to Improve Performance and Lower Costs'
+  authors:
+  - 16x Eval Team
+  year: 2025
+  type: blog_post
+  url: https://eval.16x.engineer/blog/llm-context-management-guide
+  quality_score: 4
+  relevance: 'LLM이 본질적으로 stateless하기 때문에 상태 관리가 별도 설계 단위로 필요함을 명확히 설명. "컨텍스트 엔지니어링은
+    컨텍스트 창을 정확히 올바른 정보로 채우는 섬세한 예술이자 과학"(Andrej Karpathy 인용)은 상태 관리자 절의 도입 문장으로 활용
+    가능. Context bloat → 성능 저하·비용 증가 메커니즘은 "이 단계가 없으면 어떻게 되는가" 역순 서술에 최적.
+
+    '
+- source_id: web_09
+  title: How to Develop Modular LLM Pipelines?
+  authors:
+  - Hakeem Abbas
+  year: 2024
+  type: blog_post
+  url: https://medium.com/@hakeemsyd/how-to-develop-modular-llm-pipelines-31faa8fae136
+  quality_score: 3
+  relevance: '관심사의 분리(SoC) 원칙을 LLM 파이프라인에 적용하는 방법을 실용적으로 설명. "전처리 모듈은 특정 모델과 독립적으로
+    텍스트 변환만 처리하고, 추론 모듈은 다른 파이프라인 부분 변경 없이 LLM을 교체할 수 있어야 한다"는 주장은 ch04 구성 요소 분리의
+    설계적 이유 절에서 소프트웨어 원칙 연결 근거로 활용.
+
+    '
+- source_id: web_10
+  title: '#008: Beyond Prompt Engineering: What Engineers Are Actually Using to Make
+    LLMs Reliable in Production'
+  authors:
+  - Full Stack AI Engineer (Substack)
+  year: 2025
+  type: blog_post
+  url: https://fullstackaiengineer.substack.com/p/008-beyond-prompt-engineering-what
+  quality_score: 3
+  relevance: '"업계는 ''더 나은 프롬프트'' 단계를 조용히 지나쳤으며, 진지한 엔지니어들은 LLM을 신뢰할 수 없는 외부 의존성처럼
+    취급한다"는 업계 관점 증거. ch04의 핵심 논지("프롬프트 엔지니어링은 파이프라인의 한 단계일 뿐")를 뒷받침하는 실무자 목소리로, 피해야
+    할 오해 반박에 활용 가능.
+
+    '
+supporting_sources:
+- source_id: web_11
+  title: 'Prompt-Layered Architecture: A New Stack for AI-First Product Design'
+  authors:
+  - Savi Khatri
+  year: 2024
+  type: academic_paper
+  url: https://ijsrm.net/index.php/ijsrm/article/view/5670
+  quality_score: 3
+  relevance: '4계층 PLA 모델(Prompt Composition, Orchestration, Response Interpretation,
+    Domain Memory)이 ch04 구성 요소 분류 체계와 구조적으로 대응됨. "대부분의 AI 앱은 구성 요소 간 경계가 불분명한 단일 계층
+    파이프라인에 의존한다"는 비판은 ''분리하지 않았을 때의 문제'' 절에서 인용 가능.
+
+    '
+- source_id: web_12
+  title: 'LLM Applications: Current Paradigms and the Next Frontier'
+  authors:
+  - (다수 저자, arXiv 2503.04596)
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2503.04596
+  quality_score: 3
+  relevance: 'LangChain·LlamaIndex·LangGraph 등 주요 프레임워크가 파이프라인 구성 요소를 어떻게 모듈식 추상화로
+    구현하는지 비교하는 서베이. 프레임워크 독립적 설계 논지를 강화할 때 "프레임워크는 도구일 뿐, 개념적 단위는 프레임워크 이전에 존재한다"는
+    논거의 배경 자료로 활용.
+
+    '
+- source_id: web_13
+  title: 'AgentForge: A Lightweight Modular Framework for Constructing Autonomous
+    Agents Driven by Large Language Models'
+  authors:
+  - (다수 저자, arXiv 2601.13383)
+  year: 2026
+  type: academic_paper
+  url: https://arxiv.org/abs/2601.13383
+  quality_score: 3
+  relevance: '직접 API 통합(모놀리식)과 과도한 프레임워크 의존(복잡성 과부하) 사이의 설계 트레이드오프를 논증. "모듈식 스킬은 잘
+    정의된 입출력 계약을 가진 이산적·재사용 가능 단위로 캡슐화된다"는 주장이 ch04 정보 흐름 개념 도입에 유용.
+
+    '
+- source_id: web_14
+  title: 'Architecting Resilient LLM Agents: A Guide to Secure Plan-then-Execute Implementations'
+  authors:
+  - Ron F. Del Rosario
+  - Klaudia Krawiecka
+  - Christian Schroeder de Witt
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2509.08646
+  quality_score: 4
+  relevance: 'Plan-then-Execute 패턴에서 계획과 실행의 분리가 왜 아키텍처적 이점을 주는지 체계적으로 분석. "관심사의 의도적
+    분리는 예측 가능성, 비용 효율성, 추론 품질에서 이점을 제공한다"는 주장은 ch04 구성 요소 분리의 설계적 이유 절에서 학술 근거로 사용
+    가능. ch06(에이전트) 연결 포석으로도 활용.
+
+    '
+- source_id: web_15
+  title: LangChain Official Architecture & Conceptual Guide
+  authors:
+  - LangChain, Inc.
+  year: 2024
+  type: documentation
+  url: https://python.langchain.com/docs/concepts/
+  quality_score: 4
+  relevance: 'Runnable 프로토콜·프롬프트 템플릿·LLM/ChatModel·출력 파서·리트리버·메모리·에이전트 등 핵심 추상화 단위를
+    공식 정의. "프레임워크가 실제로 어떤 경계를 그었는가"를 보여주는 실증 사례. ch04에서 ''이 개념은 특정 프레임워크의 발명이 아니라
+    소프트웨어 구조화 원칙의 구현''임을 설명할 때 대조 사례로 사용.
+
+    '
+- source_id: web_16
+  title: LlamaIndex High-Level Concepts (Official Documentation)
+  authors:
+  - LlamaIndex (Jerry Liu et al.)
+  year: 2024
+  type: documentation
+  url: https://docs.llamaindex.ai/en/stable/getting_started/concepts/
+  quality_score: 4
+  relevance: '데이터 커넥터·인덱스·쿼리 엔진·챗 엔진·에이전트·워크플로우의 5계층 추상화. LangChain과 다른 방식으로 같은 파이프라인
+    문제를 분해했다는 점이 "구성 요소는 특정 도구에 종속되지 않는다"는 ch04 핵심 주장을 뒷받침. ch05(RAG) 연결 포석으로도 유용.
+
+    '
+- source_id: web_17
+  title: 'LLM Structured Outputs: Schema Validation for Real Pipelines'
+  authors:
+  - Collin Wilkins
+  year: 2026
+  type: blog_post
+  url: https://collinwilkins.com/articles/structured-output
+  quality_score: 3
+  relevance: '출력 처리 단계를 ''데이터 생산자''로 재정의하고, 스키마·버전 관리·검증 실패 처리를 설명. "schema_version과
+    prompt_version을 로그에 기록해야 롤백·감사 가능"은 출력 처리기 절의 설계 고려사항으로 활용. data contract 개념이
+    정보 흐름 설계 논의와 자연스럽게 연결.
+
+    '
+- source_id: web_18
+  title: 'LLM Structure Outputs: The Silent Hero of Production AI'
+  authors:
+  - Decoding AI (newsletter)
+  year: 2025
+  type: blog_post
+  url: https://www.decodingai.com/p/llm-structured-outputs-the-only-way
+  quality_score: 3
+  relevance: '구조화 출력을 "LLM(Software 3.0)과 애플리케이션 코드(Software 1.0) 간의 공식 계약(formal
+    contract)"으로 정의. 확률적 모델과 결정론적 코드를 연결하는 인터페이스로서의 출력 처리기 개념을 직관적으로 설명하는 인용 포인트.
+    ch04 정보 흐름 절에서 단계 간 계약 개념 도입에 유용.
+
+    '
+- source_id: web_19
+  title: How To Solve LLM Production Challenges & How Prompt Updates Drive Most Incidents
+  authors:
+  - Deepchecks Team
+  year: 2025
+  type: blog_post
+  url: https://deepchecks.com/llm-production-challenges-prompt-update-incidents/
+  quality_score: 3
+  relevance: '"모델/인프라 장애보다 관리되지 않는 프롬프트 변경 누적이 프로덕션 신뢰성을 더 많이 무너뜨린다"는 실증적 주장. 프롬프트
+    구성기가 독립 설계 단위가 되어야 하는 운영 근거로 직접 인용 가능. ch03→ch04 연결 흐름("실패 원인의 구체화")에서 사례로 활용.
+
+    '
+- source_id: web_20
+  title: Architecting Efficient Context-Aware Multi-Agent Framework for Production
+  authors:
+  - Google Developers Blog
+  year: 2025
+  type: blog_post
+  url: https://developers.googleblog.com/architecting-efficient-context-aware-multi-agent-framework-for-production/
+  quality_score: 4
+  relevance: 'Google ADK 설계 철학: "Session은 ground truth이고, working context는 그로부터 파생된
+    일시적 표현"이라는 분리 원칙. 상태 관리자와 컨텍스트 구성이 별개의 독립 설계 단위인 이유를 Google의 실제 프로덕션 결정 사례로 설명.
+    ch06(에이전트) 상태 관리 연결 포석으로도 유용.
+
+    '
+- source_id: web_21
+  title: Handling LLM Output Parsing Errors
+  authors:
+  - APXML
+  year: 2024
+  type: documentation
+  url: https://apxml.com/courses/prompt-engineering-llm-application-development/chapter-7-output-parsing-validation-reliability/handling-parsing-errors
+  quality_score: 3
+  relevance: '파싱 오류 처리의 계층 구조(단순 재시도 → 수정 프롬프트 재시도 → fallback)를 체계적으로 설명. 출력 처리기와
+    오류 처리기의 협력 구조를 설명할 때, 두 구성 요소가 왜 분리되어야 하는지를 구체적 흐름으로 보여주는 사례.
+
+    '
+- source_id: web_22
+  title: Structuring LLM Application Code
+  authors:
+  - ApX Machine Learning
+  year: 2024
+  type: blog_post
+  url: https://apxml.com/courses/prompt-engineering-llm-application-development/chapter-8-application-development-considerations/structuring-llm-application-code
+  quality_score: 3
+  relevance: 'LLM Client Abstraction, Prompt Management, Data Handling, Configuration,
+    Presentation/API Layer로 구체화한 관심사의 분리 원칙. 독자의 기존 백엔드 개발 경험(MVC, 레이어드 아키텍처)과 LLM
+    파이프라인 구조를 연결하는 브릿지 역할. ch04 톤 메모의 "소프트웨어 아키텍처 경험과 연결" 지침과 일치.
+
+    '
+- source_id: ai_system_design_book_plan
+  title: AI 시스템 설계 - 집필 기획안
+  authors:
+  - 이한울
+  year: 2025
+  type: internal_document
+  url: sources/raw/docs/ai_system_design_book_plan.md
+  quality_score: 5
+  relevance: 책 전체의 핵심 논지("모델이 아닌 시스템을 설계하라")와 하네스 개념, EDD 패러다임 정의를 담은 1차 권위 자료. ch04에서
+    "파이프라인은 하네스가 감싸는 내부 구조"임을 재확인할 때, ch01 하네스 정의와의 용어 정합성 확인에 필수. 시장 분석·독자 프로파일 데이터도
+    포함.

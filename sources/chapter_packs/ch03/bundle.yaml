@@ -1,0 +1,261 @@
+chapter_id: ch03
+chapter_title: 문제는 모델이 아니라 시스템이다
+core_sources:
+- source_id: web_01
+  title: 'The Root Causes of Failure for Artificial Intelligence Projects and How
+    They Can Succeed: Avoiding the Anti-Patterns of AI'
+  authors:
+  - James Ryseff
+  - Brandon F. De Bruhl
+  - Sydne J. Newberry
+  year: 2024
+  type: industry_report
+  url: https://www.rand.org/pubs/research_reports/RRA2680-1.html
+  quality_score: 5
+  relevance: '65명의 AI/ML 실무자 인터뷰를 기반으로 AI 프로젝트 실패의 근본 원인을 실증 분석한 RAND 보고서. AI 프로젝트
+    실패율이 80% 이상이며 그 원인이 모델 성능이 아닌 문제 정의 오해·인프라 부재·배포 불일치임을 데이터로 보여준다. 4-1절 귀인 오류 논증과
+    4-2절 실패 지점 지도에서 핵심 통계 인용 자료로 활용 가능.
+
+    '
+- source_id: web_02
+  title: Hidden Technical Debt in Machine Learning Systems
+  authors:
+  - D. Sculley
+  - Gary Holt
+  - Daniel Golovin
+  - Eugene Davydov
+  - Todd Phillips
+  - Dietmar Ebner
+  - Vinay Chaudhary
+  - Michael Young
+  - Jean-François Crespo
+  - Dan Dennison
+  year: 2015
+  type: academic_paper
+  url: https://papers.neurips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf
+  quality_score: 5
+  relevance: 'Google 엔지니어들이 NeurIPS에 발표한 고전 논문. "ML 모델 코드는 전체 시스템의 5% 이하"라는 핵심 수치와
+    boundary erosion·entanglement·hidden feedback loop 등 시스템 수준 부채 개념은 4-2절 실패 지점
+    지도와 4-3절 시스템 관점 정의의 기술적 토대를 제공한다. "모델을 바꿔도 문제가 반복되는 이유"를 설명하는 가장 강력한 레퍼런스.
+
+    '
+- source_id: web_03
+  title: 'Failure Modes in LLM Systems: A System-Level Taxonomy for Reliable AI Applications'
+  authors:
+  - Vaishali Vinay
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2511.19933
+  quality_score: 5
+  relevance: '프로덕션 LLM 실패가 모델 중심 문제가 아닌 시스템 엔지니어링 문제임을 15가지 은닉 실패 모드(추론 드리프트·도구 오호출·버전
+    드리프트 등)로 공식화한 논문. 4-2절 실패 지점 지도 작성의 직접 근거. "기존 벤치마크가 안정성·재현성·워크플로 통합을 측정하지 못한다"는
+    비판은 EDD 필요성과 연결되어 ch02와의 논증 수렴에도 기여한다.
+
+    '
+- source_id: web_04
+  title: Why Do Multi-Agent LLM Systems Fail?
+  authors:
+  - Mert Cemri
+  - Melissa Z. Pan
+  - Shuyi Yang
+  - Lakshya A. Agrawal
+  - Bhavya Chopra
+  - Rishabh Tiwari
+  - Kurt Keutzer
+  - Ion Stoica
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2503.13657
+  quality_score: 5
+  relevance: '7개 MAS 프레임워크, 1,600개 실행 트레이스 분석으로 MAST 분류체계를 제시한 논문. 실패의 근본 원인이 모델 성능이
+    아닌 시스템 설계 결함임을 실증. "표면적 수정(프롬프트 개선)으로 완전히 해결되지 않는다"는 결과는 4-1절 귀인 오류 반복의 메커니즘을
+    설명하고, PART 2 설계 언어 필요성의 동기부여 자료로 직접 활용 가능.
+
+    '
+- source_id: web_05
+  title: 'Challenges in Deploying Machine Learning: A Survey of Case Studies'
+  authors:
+  - Andrei Paleyes
+  - Raoul-Gabriel Urma
+  - Neil D. Lawrence
+  year: 2022
+  type: academic_paper
+  url: https://dl.acm.org/doi/full/10.1145/3533378
+  quality_score: 5
+  relevance: 'ACM Computing Surveys 게재 논문. 다양한 산업의 ML 배포 사례를 체계적으로 검토하여 실패가 파이프라인
+    전 단계(데이터 수집·전처리·모델 학습·배포·모니터링)에 분산됨을 실증. 4-2절 실패 지점 지도의 산업 사례 근거로 활용하고, "배포 편향"은
+    운영 환경 실패 지점 논의에서 직접 인용 가능.
+
+    '
+- source_id: web_06
+  title: 'Machine Learning in Production: From Models to Products'
+  authors:
+  - Christian Kästner
+  year: 2025
+  type: documentation
+  url: https://mlip-cmu.github.io/book/
+  quality_score: 5
+  relevance: 'CMU 교재(MIT Press 오픈 액세스). "안전성은 모델이 아닌 시스템 수준의 속성"이라는 명제를 체계적으로 전개한다.
+    FMEA를 ML 시스템에 적용하는 방법은 4-3절 시스템 관점의 조작적 정의에서 실무 프레임워크로 소개 가능. 4-4절 소결에서 시스템 설계
+    사고의 학술적 정당성을 부여하는 근거로 활용.
+
+    '
+- source_id: web_07
+  title: Building LLM Applications for Production
+  authors:
+  - Chip Huyen
+  year: 2023
+  type: blog_post
+  url: https://huyenchip.com/2023/04/11/llm-engineering.html
+  quality_score: 4
+  relevance: '가장 널리 인용되는 LLM 프로덕션 실무 참고 자료. "LLM으로 멋진 것을 만들기는 쉽지만 프로덕션 준비 상태로 만들기는
+    매우 어렵다"는 진단은 ch03 도입부의 공감 유도 장면에서 직접 인용 가능. 프롬프트 모호성·비결정성·비용 등의 실무 과제를 정리하여 4-2절
+    실패 지점 지도의 실무 맥락을 제공.
+
+    '
+supporting_sources:
+- source_id: web_08
+  title: Non-Determinism of 'Deterministic' LLM Settings
+  authors:
+  - Berk Atil
+  - Alexa Chittams
+  - Liseng Fu
+  - Ferhan Ture
+  - Lixinyu Xu
+  - Breck Baldwin
+  year: 2024
+  type: academic_paper
+  url: https://arxiv.org/abs/2408.04667
+  quality_score: 4
+  relevance: 'temperature=0 설정에도 최대 15% 정확도 변동이 발생한다는 실증 연구. 비결정성이 모델 자체가 아닌 인프라(동적
+    배칭) 수준의 구조적 원인임을 밝혀, "모델을 결정론적으로 설정하면 된다"는 귀인 오류를 논파하는 데 활용. 1·2장의 nondeterminism
+    개념을 재등장시키는 구체적 데이터 포인트.
+
+    '
+- source_id: web_09
+  title: Defeating Nondeterminism in LLM Inference
+  authors:
+  - Horace He
+  - Thinking Machines Lab
+  year: 2025
+  type: blog_post
+  url: https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/
+  quality_score: 4
+  relevance: '비결정성의 진짜 원인이 동적 배칭이라는 시스템 수준 엔지니어링 문제임을 밝힌 기술 블로그. "어차피 확률적이다"는 체념적
+    귀인이 수정 가능한 시스템 결함을 은폐한다는 주장은 4-3절 시스템 관점 정의에서 인식론적 전환의 예시로 활용 가능.
+
+    '
+- source_id: web_10
+  title: Demystifying the Lifecycle of Failures in Platform-Orchestrated Agentic Workflows
+  authors:
+  - Xuyan Ma
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2509.23735
+  quality_score: 4
+  relevance: '307건의 실제 에이전틱 워크플로우 실패 사례(AgentFail 데이터셋)를 에이전트·구조·플랫폼 3개 계층으로 분류한 논문.
+    실패가 LLM 노드 외 오케스트레이션 구조와 런타임 환경에서도 발생함을 실증하여, 4-2절 실패 지점 지도의 "연결 구조" 및 "운영 환경"
+    지점을 구체화하는 데 활용 가능.
+
+    '
+- source_id: web_11
+  title: Failure Modes in Machine Learning Systems
+  authors:
+  - Ram Shankar Siva Kumar
+  - David O'Brien
+  - Kendra Albert
+  - Salome Viljoen
+  - Jeffrey Snover
+  year: 2019
+  type: academic_paper
+  url: https://arxiv.org/abs/1911.11034
+  quality_score: 4
+  relevance: 'Microsoft AI Red Team 작성. ML 시스템 실패를 의도적(적대적 공격)·비의도적(설계 취약점) 으로 분류.
+    "ML 실패 방식은 전통 소프트웨어 실패와 본질적으로 다르다"는 명제는 4-3절 시스템 관점 정의에서 설계 사고 전환의 필요성을 역사적으로
+    뒷받침.
+
+    '
+- source_id: web_12
+  title: 'It''s the AI''s fault, not mine: Mind perception increases blame attribution
+    to AI'
+  authors:
+  - Minjoo Joo
+  year: 2024
+  type: academic_paper
+  url: https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0314559
+  quality_score: 4
+  relevance: 'AI를 의인화할수록 AI에 책임을 귀인하고 설계자·조직의 책임을 줄이는 현상을 3개 실험로 실증한 PLOS ONE 논문.
+    4-1절 귀인 오류 논증에서 "모델 탓" 귀인이 심리적으로 어떻게 작동하는지 설명하는 실험적 근거. "AI는 스케이프고트로 오용될 수 있다"는
+    주장은 귀인 오류의 구조적 반복 메커니즘 설명에 직접 활용.
+
+    '
+- source_id: web_13
+  title: People or Systems? To Blame Is Human. The Fix Is to Engineer
+  authors:
+  - Richard J. Holden
+  year: 2009
+  type: academic_paper
+  url: https://pmc.ncbi.nlm.nih.gov/articles/PMC3115647/
+  quality_score: 4
+  relevance: '항공·의료 분야에서 전문가조차 인간 귀인에 의존하는 경향을 분석한 논문. NTSB 항공사고 조사의 74%가 "승무원 실패"를
+    원인으로 지목했지만 실제 원인은 시스템에 있었다는 사례는 4-1절 귀인 오류 논증에서 역사적 유비로 활용 가능. "조종사 탓 → 모델 탓"
+    비유의 근거 자료.
+
+    '
+- source_id: web_14
+  title: 'Postmortem Culture: Learning from Failure (Google SRE Book, Chapter 15)'
+  authors:
+  - Google SRE Team
+  year: 2017
+  type: documentation
+  url: https://sre.google/sre-book/postmortem-culture/
+  quality_score: 5
+  relevance: 'Google SRE의 블레임리스 포스트모템 철학을 담은 공식 문서. "개인은 고칠 수 없지만 시스템과 프로세스는 고칠 수
+    있다"는 원리는 4-3절 시스템 관점 정의의 실천적 예시로 활용. blame 문화의 폐해와 시스템 사고로의 전환이 현장에서 어떻게 구현되는지
+    보여주는 권위 있는 실무 레퍼런스.
+
+    '
+- source_id: web_15
+  title: A Taxonomy of Prompt Defects in LLM Systems
+  authors:
+  - Haoye Tian
+  - Chong Wang
+  - BoYang Yang
+  - Lyuye Zhang
+  - Yang Liu
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2509.14404
+  quality_score: 4
+  relevance: '프롬프트 결함을 6개 차원의 구조적 원인으로 분류한 최초의 체계적 논문. "프롬프트를 개선하면 된다"는 귀인 오류를 소프트웨어
+    엔지니어링 관점에서 반박한다. 4-1절에서 "프롬프트 개선으로도 해결되지 않는 이유"를 설명할 때 보강 근거로 활용.
+
+    '
+- source_id: web_16
+  title: 'The State of AI in Early 2024: Gen AI Adoption Spikes and Starts to Generate
+    Value'
+  authors:
+  - Alex Singla
+  - Alexander Sukharevsky
+  - Lareina Yee
+  - Michael Chui
+  year: 2024
+  type: industry_report
+  url: https://www.mckinsey.com/capabilities/quantumblack/our-insights/the-state-of-ai-2024
+  quality_score: 4
+  relevance: 'McKinsey 1,363명 글로벌 설문 기반 보고서. 72% 조직이 AI를 사용하지만 기업 수준의 실질적 가치 창출은 극소수라는
+    "채택-가치 격차"를 데이터로 제시. 4-1절 도입부에서 독자 공감을 유도하는 현황 수치로 활용 가능하며, 고성과 기업이 데이터·운영 모델
+    등 구조적 역량에서 차별화된다는 결과는 시스템 설계의 중요성을 뒷받침.
+
+    '
+- source_id: ai_system_design_book_plan
+  title: AI 시스템 설계 - 집필 기획안
+  authors:
+  - 이한울
+  year: 2025
+  type: internal_document
+  url: sources/raw/docs/ai_system_design_book_plan.md
+  quality_score: 5
+  relevance: 본 도서의 기획안. ch03의 핵심 논제("모델이 아니라 시스템이다")가 전체 argument_map에서 어떤 위치를 차지하는지
+    확인하는 내부 참조 자료. PART 1 논증 수렴(4-4절) 작성 시 1·2장과의 개념 연속성(harness, EDD, nondeterminism)
+    검토에 활용.
