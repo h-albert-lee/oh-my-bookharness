@@ -51,7 +51,17 @@ class TechnicalReviewerAgent(BaseAgent):
 """
         result = self._call_llm(TECHNICAL_REVIEWER, user_prompt)
         report = self._parse_review_result(chapter_id, "technical", result)
-        report.binary_checks = self.gate_checker.check(chapter_id, "technical")
+        binary = self.gate_checker.check(chapter_id, "technical")
+        report.binary_checks = binary
+
+        # Auto-add must_fix if page target is not met
+        if not binary.get("meets_minimum_length", True):
+            detail = binary.get("page_check_detail", "")
+            report.must_fix.append(f"[분량 미달] 목표 분량의 70% 미만입니다. {detail}")
+        if not binary.get("within_maximum_length", True):
+            detail = binary.get("page_check_detail", "")
+            report.must_fix.append(f"[분량 초과] 목표 분량의 150%를 초과합니다. {detail}")
+
         return report
 
     def _parse_review_result(self, chapter_id: str, review_type: str, result: str) -> ReviewReport:

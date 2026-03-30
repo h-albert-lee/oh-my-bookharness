@@ -56,6 +56,24 @@ h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.04em; color: 
 .sidebar-brand h1 { font-size: 15px; line-height: 1.2; }
 .brand-sub { font-size: 11px; color: var(--text-tertiary); }
 .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+
+/* ── Live Activity Panel ── */
+.live-panel {
+  margin: 12px 0; padding: 10px 12px;
+  background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.25);
+  border-radius: var(--radius); font-size: 12px;
+}
+.live-panel.hidden { display: none; }
+.live-panel.idle { background: var(--surface); border-color: var(--border); }
+.live-panel.idle .live-dot { background: var(--text-tertiary); animation: none; }
+.live-panel.idle .live-label { color: var(--text-tertiary); }
+.live-dot-row { display: flex; align-items: center; gap: 8px; }
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--success); animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.live-label { font-weight: 600; color: var(--success); }
 .nav-btn {
   display: flex; align-items: center; gap: 10px;
   background: transparent; border: none; color: var(--text-secondary);

@@ -38,8 +38,8 @@ class ChiefEditorAgent(BaseAgent):
 ## 장 정보
 - chapter_id: {chapter_id}
 - 제목: {title}
-- 예상 분량: {expected_pages}쪽 (46배변형판 기준, 쪽당 약 500자)
-- 총 예상 글자 수: 약 {expected_pages * 500}자
+- 예상 분량: {expected_pages}쪽 (46배변형판 기준, 쪽당 약 1000자)
+- 총 예상 글자 수: 약 {expected_pages * 1000}자
 - 장 메모: {ch_note}
 - 의존 장: {deps_block}
 - 이 장이 도입하는 개념: {', '.join(introduces) if introduces else '미정'}

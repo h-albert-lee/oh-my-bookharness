@@ -40,10 +40,32 @@ class BinaryGateChecker:
             return self._check_continuity(chapter_id, draft)
         return {}
 
+    def _get_page_targets(self, chapter_id: str) -> dict:
+        """Load expected_pages from chapter_dependencies.yaml."""
+        deps_path = self.root / "book/chapter_dependencies.yaml"
+        if deps_path.exists():
+            deps = load_yaml(deps_path) or {}
+            ch_info = deps.get(chapter_id, {})
+            if isinstance(ch_info, dict):
+                expected = ch_info.get("expected_pages", 20)
+                return {
+                    "expected_pages": expected,
+                    "target_chars": expected * 1000,
+                    "min_chars": int(expected * 1000 * 0.7),  # 70% 이상이면 통과
+                    "max_chars": int(expected * 1000 * 1.5),  # 150% 이하이면 통과
+                }
+        return {"expected_pages": 20, "target_chars": 20000, "min_chars": 14000, "max_chars": 30000}
+
     def _check_technical(self, chapter_id: str, draft: str) -> dict[str, bool]:
         has_unsupported = self._has_patterns_without_refs(draft, ABSOLUTE_PATTERNS)
         has_source_refs = bool(re.search(r"\[\^", draft))
         word_count = len(draft.split())
+        char_count = len(draft)
+
+        # Page target check
+        targets = self._get_page_targets(chapter_id)
+        meets_min_length = char_count >= targets["min_chars"]
+        within_max_length = char_count <= targets["max_chars"]
 
         # Citation verification: check if cited source_ids exist in the bundle
         citation_result = self._verify_citations(chapter_id, draft)
@@ -51,8 +73,10 @@ class BinaryGateChecker:
         return {
             "has_unsupported_claims": has_unsupported,
             "has_source_references": has_source_refs,
-            "meets_minimum_length": word_count >= 500,
+            "meets_minimum_length": meets_min_length,
+            "within_maximum_length": within_max_length,
             "all_citations_valid": citation_result["all_valid"],
+            "page_check_detail": f"{char_count}자 (목표: {targets['target_chars']}자 = {targets['expected_pages']}쪽, 허용: {targets['min_chars']}~{targets['max_chars']}자)",
         }
 
     def _verify_citations(self, chapter_id: str, draft: str) -> dict:
@@ -177,9 +201,16 @@ class ReviewIO:
         json_path = self.root / f"eval/reports/{chapter_id}_{report.review_type}_v1.json"
 
         score_lines = "\n".join(f"- {k}: **{v}/5**" for k, v in report.score.items())
-        check_lines = "\n".join(
-            f"- {k}: {'✓ Pass' if v else '✗ Fail'}" for k, v in report.binary_checks.items()
-        ) if report.binary_checks else "- (binary checks 미실행)"
+        if report.binary_checks:
+            check_parts = []
+            for k, v in report.binary_checks.items():
+                if isinstance(v, bool):
+                    check_parts.append(f"- {k}: {'✓ Pass' if v else '✗ Fail'}")
+                else:
+                    check_parts.append(f"- {k}: {v}")
+            check_lines = "\n".join(check_parts)
+        else:
+            check_lines = "- (binary checks 미실행)"
 
         body = f"""# {report.review_type.title()} Review: {chapter_id}
 

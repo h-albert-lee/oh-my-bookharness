@@ -375,6 +375,32 @@ async function submitCreate(e) {
   } catch (e) { showLoading(false); notify(`Create failed: ${e.message}`, true); }
 }
 
+/* ── Live Activity ── */
+async function pollActivity() {
+  try {
+    const a = await api("/api/agent-logs/activity");
+    const panel = $("live-activity");
+    const detail = $("live-detail");
+    panel.classList.remove("hidden");
+
+    if (a.active) {
+      panel.classList.remove("idle");
+      const agent = a.last_agent || "unknown";
+      const elapsed = a.last_elapsed ? `${a.last_elapsed}s` : "";
+      const count = a.recent_count || 0;
+      detail.textContent = `${agent} ${elapsed} · ${count} calls in 5min`;
+    } else {
+      panel.classList.add("idle");
+      $("live-activity").querySelector(".live-label").textContent = "Idle";
+      if (a.last_agent) {
+        detail.textContent = `Last: ${a.last_agent} · ${fmtDate(a.last_timestamp)}`;
+      } else {
+        detail.textContent = "No activity yet";
+      }
+    }
+  } catch (e) { /* silent */ }
+}
+
 /* ── Auto Refresh ── */
 function setupAutoRefresh() {
   if (S.timer) clearInterval(S.timer);
@@ -385,7 +411,8 @@ function setupAutoRefresh() {
     if (active === "view-approvals") loadApprovals();
     if (active === "view-chapter" && S.chapterId && !S.editing) loadChapter();
     if (active === "view-logs") loadAgentLogs();
-  }, 15000);
+    pollActivity();
+  }, 5000);
 }
 
 /* ── Agent Logs ── */
@@ -482,6 +509,7 @@ function init() {
   };
 
   setupAutoRefresh();
+  pollActivity();
   loadDashboard();
 }
 
