@@ -9,6 +9,12 @@ from bookharness.manuscript.versioning import next_draft_path
 from bookharness.utils.io import write_text
 
 
+def _extract_chapter_num(chapter_id: str) -> int:
+    """Extract chapter number from chapter_id (e.g., 'ch01' -> 1)."""
+    digits = "".join(c for c in chapter_id if c.isdigit())
+    return int(digits) if digits else 0
+
+
 class DraftWriterAgent(BaseAgent):
     def _get_expected_pages(self, ctx: dict, chapter_id: str) -> int:
         ch_deps = ctx.get("chapter_dependencies", {})
@@ -18,24 +24,43 @@ class DraftWriterAgent(BaseAgent):
         return 20
 
     def _parse_sections_from_outline(self, outline: str) -> list[dict]:
-        """Parse outline into a list of section dicts with title and full content."""
+        """Parse outline into a list of section dicts with title and full content.
+
+        Supports both old format (### Section N. Title) and new format (### Section N.M Title).
+        """
         sections: list[dict] = []
-        # Split by ### Section headers
-        parts = re.split(r"(?=^### Section \d+)", outline, flags=re.MULTILINE)
+        # Try new format first: ### Section N.M Title
+        parts = re.split(r"(?=^### Section \d+\.\d+)", outline, flags=re.MULTILINE)
         for part in parts:
             part = part.strip()
             if not part.startswith("### Section"):
                 continue
-            # Extract section number and title from first line
             first_line = part.split("\n")[0]
-            m = re.match(r"### Section (\d+)\.\s*(.*)", first_line)
+            m = re.match(r"### Section (\d+)\.(\d+)\s+(.*)", first_line)
             if m:
                 sections.append({
-                    "number": int(m.group(1)),
-                    "title": m.group(2).strip(),
+                    "number": f"{m.group(1)}.{m.group(2)}",
+                    "section_num": int(m.group(2)),
+                    "title": m.group(3).strip(),
                     "outline_detail": part,
                 })
-        # Fallback: if no sections parsed, try ## level headings
+        # Fallback: old format ### Section N. Title
+        if not sections:
+            parts = re.split(r"(?=^### Section \d+)", outline, flags=re.MULTILINE)
+            for part in parts:
+                part = part.strip()
+                if not part.startswith("### Section"):
+                    continue
+                first_line = part.split("\n")[0]
+                m = re.match(r"### Section (\d+)\.\s*(.*)", first_line)
+                if m:
+                    sections.append({
+                        "number": int(m.group(1)),
+                        "section_num": int(m.group(1)),
+                        "title": m.group(2).strip(),
+                        "outline_detail": part,
+                    })
+        # Fallback: ## level headings
         if not sections:
             parts = re.split(r"(?=^## )", outline, flags=re.MULTILINE)
             for i, part in enumerate(parts):
@@ -45,6 +70,7 @@ class DraftWriterAgent(BaseAgent):
                 first_line = part.split("\n")[0].lstrip("# ").strip()
                 sections.append({
                     "number": i,
+                    "section_num": i,
                     "title": first_line,
                     "outline_detail": part,
                 })
@@ -54,6 +80,7 @@ class DraftWriterAgent(BaseAgent):
         self,
         *,
         chapter_id: str,
+        ch_num: int,
         title: str,
         section: dict,
         section_index: int,
@@ -68,6 +95,9 @@ class DraftWriterAgent(BaseAgent):
         revision_section: str,
     ) -> str:
         """Write a single section with full context of what came before."""
+        section_num = section.get("section_num", section_index + 1)
+        section_id = f"{ch_num}.{section_num}"
+
         position_guide = ""
         if section_index == 0:
             position_guide = (
@@ -108,8 +138,22 @@ class DraftWriterAgent(BaseAgent):
 
 ## 장 정보
 - chapter_id: {chapter_id}
+- 장 번호: {ch_num}
 - 장 제목: {title}
-- 현재 작성할 섹션: Section {section['number']}. {section['title']} ({section_index + 1}/{total_sections})
+- 현재 작성할 섹션: {section_id} {section['title']} ({section_index + 1}/{total_sections})
+
+## 위계 구조 지침
+- 이 섹션의 헤딩은 `## {section_id} {section['title']}` 로 시작한다.
+- 섹션 내 하위 구조는 `### {section_id}.1 중제목`, `### {section_id}.2 중제목` 형식을 사용한다.
+- 필요 시 소제목은 `#### 소제목` 형식을 사용한다.
+- 넘버링 없는 ##, ### 헤딩은 사용하지 않는다.
+
+## 구조물 형식 지침
+- 참고사항/심화 설명은 `::: box 제목 ... :::` 형식을 사용한다.
+- 용어 정의/개념 보충은 `::: note 제목 ... :::` 형식을 사용한다.
+- 실무 팁/권장사항은 `::: tip 제목 ... :::` 형식을 사용한다.
+- blockquote(`>`)를 구조물 대용으로 사용하지 않는다.
+- 표 캡션: `**표 {ch_num}-M. 제목**`, 그림 캡션: `**그림 {ch_num}-M. 제목**`
 
 ## 위치 안내
 {position_guide}
@@ -142,8 +186,7 @@ class DraftWriterAgent(BaseAgent):
 5. 첫 등장하는 전문 용어는 한국어 설명을 함께 제공한다.
 6. 목표 분량: 이 섹션은 약 {target_chars_per_section}자 내외로 작성한다.
 7. 분량이 부족하면 예시, 비유, 실무 사례를 추가하여 채운다.
-8. ## 레벨 헤딩으로 섹션 제목을 시작한다.
-9. 이 섹션만 출력하라. 다른 섹션의 내용은 작성하지 마라.
+8. 이 섹션만 출력하라. 다른 섹션의 내용은 작성하지 마라.
 """
         return self._call_llm(DRAFT_WRITER, user_prompt, max_tokens=8192)
 
@@ -156,6 +199,7 @@ class DraftWriterAgent(BaseAgent):
         context_block = self._build_context_block(ctx)
         expected_pages = self._get_expected_pages(ctx, chapter_id)
         target_chars = expected_pages * 1000
+        ch_num = _extract_chapter_num(chapter_id)
 
         summaries_block = "\n\n".join(
             f"### {ch}\n{summary[:300]}" for ch, summary in prior_summaries.items()
@@ -198,6 +242,7 @@ class DraftWriterAgent(BaseAgent):
 
             section_content = self._write_section(
                 chapter_id=chapter_id,
+                ch_num=ch_num,
                 title=title,
                 section=section,
                 section_index=i,
@@ -214,7 +259,7 @@ class DraftWriterAgent(BaseAgent):
             completed_sections.append(section_content)
 
         # Combine all sections into final draft
-        full_draft = f"# {title}\n\n" + "\n\n".join(completed_sections)
+        full_draft = f"# {ch_num}장. {title}\n\n" + "\n\n".join(completed_sections)
 
         chapter_dir = self.root / f"manuscript/{chapter_id}"
         path = next_draft_path(chapter_dir)
@@ -230,6 +275,7 @@ class DraftWriterAgent(BaseAgent):
     ) -> Path:
         """Fallback: write entire chapter in one LLM call (for short chapters or unparseable outlines)."""
         target_words = target_chars // 3
+        ch_num = _extract_chapter_num(chapter_id)
         summaries_block = "\n\n".join(
             f"### {ch}\n{summary[:300]}" for ch, summary in prior_summaries.items()
         ) if prior_summaries else "없음"
@@ -253,8 +299,23 @@ class DraftWriterAgent(BaseAgent):
 
 ## 장 정보
 - chapter_id: {chapter_id}
+- 장 번호: {ch_num}
 - 제목: {title}
 - 목표 분량: {expected_pages}쪽 (약 {target_chars}자, {target_words}단어 이상)
+
+## 위계 구조 지침
+- 장 제목: `# {ch_num}장. {title}`
+- 절 제목: `## {ch_num}.M 절제목` (M은 절 번호)
+- 중제목: `### {ch_num}.M.K 중제목` (K는 중제목 번호)
+- 소제목: `#### 소제목` (필요 시)
+- 넘버링 없는 ##, ### 헤딩은 사용하지 않는다.
+
+## 구조물 형식 지침
+- 참고사항/심화 설명: `::: box 제목 ... :::`
+- 용어 정의/개념 보충: `::: note 제목 ... :::`
+- 실무 팁/권장사항: `::: tip 제목 ... :::`
+- blockquote(`>`)를 구조물 대용으로 사용하지 않는다.
+- 표 캡션: `**표 {ch_num}-M. 제목**`, 그림 캡션: `**그림 {ch_num}-M. 제목**`
 
 ## Chapter Brief
 {brief}

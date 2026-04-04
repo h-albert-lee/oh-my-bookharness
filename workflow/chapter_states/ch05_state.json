@@ -1,0 +1,25 @@
+{
+  "chapter_id": "ch05",
+  "title": " RAG를 기능이 아니라 아키텍처로 이해하기",
+  "status": "not_started",
+  "current_stage": "chapter_initialization",
+  "approved": false,
+  "source_pack_ready": false,
+  "outline_ready": false,
+  "draft_versions": [],
+  "latest_draft": null,
+  "review_reports": [],
+  "revision_plan": null,
+  "human_feedback": [],
+  "gate_passed": null,
+  "gate_details": null,
+  "open_issues": [],
+  "dependencies": [
+    "ch01",
+    "ch02",
+    "ch03",
+    "ch04"
+  ],
+  "artifacts": {},
+  "last_updated": "2026-04-04T07:28:38Z"
+}
