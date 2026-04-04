@@ -122,7 +122,7 @@ class BaseAgent:
     def _build_context_block(self, ctx: dict[str, object]) -> str:
         """Build a project context block for insertion into prompts."""
         parts = []
-        for key in ("blueprint", "tone_guide", "argument_map", "decisions_log", "writing_rules", "audience_profile"):
+        for key in ("blueprint", "tone_guide", "argument_map", "decisions_log", "writing_rules", "audience_profile", "publisher_formatting_guide"):
             value = ctx.get(key, "")
             if value:
                 parts.append(f"### {key}\n\n{value}")

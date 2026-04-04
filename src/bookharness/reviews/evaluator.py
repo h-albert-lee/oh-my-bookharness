@@ -131,9 +131,58 @@ class BinaryGateChecker:
     def _check_style(self, draft: str) -> dict[str, bool]:
         has_declarative = self._has_patterns(draft, DECLARATIVE_PATTERNS)
         has_blog = self._has_patterns(draft, BLOG_PATTERNS)
+        hierarchy = self._check_heading_hierarchy(draft)
         return {
             "tone_guide_violation": has_declarative,
             "blog_style_detected": has_blog,
+            **hierarchy,
+        }
+
+    def _check_heading_hierarchy(self, draft: str) -> dict[str, bool | str]:
+        """Check that headings follow the N.M / N.M.K numbering convention."""
+        headings = []
+        for line in draft.splitlines():
+            if line.startswith("#"):
+                headings.append(line)
+
+        if not headings:
+            return {"heading_hierarchy_valid": False, "heading_detail": "No headings found"}
+
+        # Check ## headings have N.M numbering
+        unnumbered_sections = []
+        # Check ### headings have N.M.K numbering
+        unnumbered_subsections = []
+        # Check for legacy blockquote-as-structure patterns
+        has_blockquote_structures = bool(re.search(
+            r"^>\s*\*\*\[(?:참고|용어 정의|참고사항)\]",
+            draft, re.MULTILINE,
+        ))
+
+        for h in headings:
+            if h.startswith("## ") and not h.startswith("### "):
+                # Should match ## N.M title
+                text = h[3:].strip()
+                if not re.match(r"\d+\.\d+\s", text):
+                    unnumbered_sections.append(text[:40])
+            elif h.startswith("### ") and not h.startswith("#### "):
+                # Should match ### N.M.K title
+                text = h[4:].strip()
+                if not re.match(r"\d+\.\d+\.\d+\s", text):
+                    unnumbered_subsections.append(text[:40])
+
+        all_numbered = len(unnumbered_sections) == 0 and len(unnumbered_subsections) == 0
+        detail_parts = []
+        if unnumbered_sections:
+            detail_parts.append(f"넘버링 없는 절({len(unnumbered_sections)}개): {', '.join(unnumbered_sections[:3])}")
+        if unnumbered_subsections:
+            detail_parts.append(f"넘버링 없는 중제목({len(unnumbered_subsections)}개): {', '.join(unnumbered_subsections[:3])}")
+        if has_blockquote_structures:
+            detail_parts.append("blockquote 구조물 사용 감지 (:::box/note/tip 형식 권장)")
+
+        return {
+            "heading_hierarchy_valid": all_numbered,
+            "no_blockquote_structures": not has_blockquote_structures,
+            "heading_detail": "; ".join(detail_parts) if detail_parts else "All headings properly numbered",
         }
 
     def _check_continuity(self, chapter_id: str, draft: str) -> dict[str, bool]:

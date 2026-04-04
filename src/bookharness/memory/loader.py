@@ -32,7 +32,7 @@ class MemoryLoader:
             "chapter_dependencies": load_yaml(self.root / "book/chapter_dependencies.yaml") or {},
             "decisions_log": read_text(self.root / "book/decisions_log.md"),
         }
-        for doc in ("audience_profile", "writing_rules"):
+        for doc in ("audience_profile", "writing_rules", "publisher_formatting_guide"):
             path = self.root / f"book/{doc}.md"
             ctx[doc] = read_text(path) if path.exists() else ""
         ctx["global_summary"] = self._read_if_exists("memory/global_summary.md")

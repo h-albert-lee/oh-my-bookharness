@@ -39,30 +39,47 @@ class MarkdownFormatter:
         )
 
     def outline(self, chapter_id: str, title: str) -> str:
+        ch_num = int("".join(c for c in chapter_id if c.isdigit()) or "0")
         return f"""# Outline: {chapter_id}
 
 ## 장 제목
 
-{title}
+**{ch_num}장. {title}**
 
-## Section 1. 문제 설정
+## 장 전체 Argument Flow
+
+(이 장의 전체 논증 흐름을 한 문단으로 서술)
+
+### Section {ch_num}.1 문제 설정
 - 목적: 독자에게 이 장이 다룰 운영 문제를 소개한다.
 - 사용 source: core source 1, supporting source 1
 - 포함할 예시: 데모는 성공했지만 운영에서 실패한 QA 시스템 사례
 - 핵심 요점: 모델 품질과 시스템 품질은 다르다.
 - 연결 아이디어: 문제를 정의한 뒤 왜 상태 기반 워크플로가 필요한지로 전환한다.
+- 구조물 배치: <!-- note: 핵심 용어 정의 -->, <!-- table: 표 {ch_num}-1. 비교표 -->
 
-## Section 2. 상태 기반 워크플로의 필요성
+#### {ch_num}.1.1 (중제목 예시)
+#### {ch_num}.1.2 (중제목 예시)
+
+### Section {ch_num}.2 상태 기반 워크플로의 필요성
 - 목적: 자유 대화형 멀티에이전트보다 deterministic workflow가 적합한 이유를 설명한다.
 - 사용 source: core source 2
 - 포함할 예시: brief → outline → draft → review → approval 파이프라인
 - 핵심 요점: 재실행과 승인 게이트가 있어야 긴 집필 작업을 통제할 수 있다.
 - 연결 아이디어: 워크플로에서 문서 중심 메모리로 자연스럽게 넘어간다.
+- 구조물 배치: <!-- box: 참고사항 제목 -->, <!-- figure: 그림 {ch_num}-1. 다이어그램 -->
 
-## Section 3. 문서 중심 메모리와 리뷰 루프
+#### {ch_num}.2.1 (중제목 예시)
+#### {ch_num}.2.2 (중제목 예시)
+
+### Section {ch_num}.3 문서 중심 메모리와 리뷰 루프
 - 목적: canonical docs, chapter summaries, review loop가 품질을 유지하는 이유를 설명한다.
 - 사용 source: core source 3, supporting source 2
 - 포함할 예시: concept dictionary와 must-cite list
 - 핵심 요점: 생성보다 리뷰와 수정 구조가 중요하다.
 - 연결 아이디어: 다음 장에서 세부 구현 모듈로 이어지도록 정리한다.
+- 구조물 배치: <!-- tip: 실무 권장사항 -->
+
+#### {ch_num}.3.1 (중제목 예시)
+#### {ch_num}.3.2 (중제목 예시)
 """
