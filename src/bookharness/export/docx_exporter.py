@@ -17,23 +17,18 @@ Style mapping:
     **표 N-M. 제목**      → Caption
     **그림 N-M. 제목**    → Caption
     - list items          → List Paragraph
-    영문(English)         → _병기 for the English part
-    [^source_id]          → footnote reference
+    [^source_id]          → Word footnote
 """
 
 from __future__ import annotations
 
-import copy
 import re
 from pathlib import Path
 
 from docx import Document
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-
-
-def _strip_heading_prefix(text: str) -> str:
-    """Remove markdown # prefixes from heading text."""
-    return text.lstrip("#").strip()
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from lxml import etree
 
 
 class DocxExporter:
@@ -41,17 +36,11 @@ class DocxExporter:
 
     def __init__(self, template_path: Path | str | None = None) -> None:
         self.template_path = Path(template_path) if template_path else None
+        self._footnote_id = 1  # auto-increment footnote IDs
+        self._footnotes_xml = None  # lxml element for footnotes part
+        self._footnotes_part = None  # the OPC part object
 
     def export(self, markdown_path: Path | str, output_path: Path | str | None = None) -> Path:
-        """Export a single Markdown file to .docx.
-
-        Args:
-            markdown_path: Path to the Markdown draft file.
-            output_path: Path for the output .docx. Defaults to same dir with .docx extension.
-
-        Returns:
-            Path to the created .docx file.
-        """
         markdown_path = Path(markdown_path)
         if output_path is None:
             output_path = markdown_path.with_suffix(".docx")
@@ -60,24 +49,25 @@ class DocxExporter:
 
         md_text = markdown_path.read_text(encoding="utf-8")
 
-        # Create document from template or blank
         if self.template_path and self.template_path.exists():
             doc = Document(str(self.template_path))
-            # Clear template content but keep styles
             self._clear_content(doc)
         else:
             doc = Document()
 
-        # Parse and render
+        self._footnote_id = 1
+        self._init_footnotes(doc)
         lines = md_text.split("\n")
         self._render(doc, lines)
+
+        # Write back modified footnotes XML
+        self._save_footnotes()
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         doc.save(str(output_path))
         return output_path
 
     def _clear_content(self, doc: Document) -> None:
-        """Remove all paragraphs and tables from the template, keeping styles."""
         for _ in range(len(doc.paragraphs)):
             p = doc.paragraphs[0]._element
             p.getparent().remove(p)
@@ -86,11 +76,10 @@ class DocxExporter:
             t.getparent().remove(t)
 
     def _render(self, doc: Document, lines: list[str]) -> None:
-        """Walk through Markdown lines and add them to the document."""
         i = 0
         footnotes: dict[str, str] = {}
 
-        # First pass: collect footnote definitions
+        # First pass: collect footnote definitions [^id]: text
         for line in lines:
             m = re.match(r"^\[\^(\w+)\]:\s*(.+)$", line)
             if m:
@@ -99,12 +88,11 @@ class DocxExporter:
         while i < len(lines):
             line = lines[i]
 
-            # Skip blank lines
             if not line.strip():
                 i += 1
                 continue
 
-            # Skip footnote definitions (already collected)
+            # Skip footnote definitions
             if re.match(r"^\[\^(\w+)\]:\s*", line):
                 i += 1
                 continue
@@ -117,7 +105,7 @@ class DocxExporter:
             # Fenced div: ::: box/note/tip
             m = re.match(r"^:::\s*(box|note|tip)\s*(.*)?$", line)
             if m:
-                i = self._render_fenced_div(doc, lines, i, m.group(1), m.group(2) or "")
+                i = self._render_fenced_div(doc, lines, i, m.group(1), m.group(2) or "", footnotes)
                 continue
 
             # Code block
@@ -132,8 +120,7 @@ class DocxExporter:
                 continue
 
             # Table caption (**표 N-M.** or **그림 N-M.**)
-            m = re.match(r"^\*\*(?:표|그림)\s+\d+-\d+\.\s*.+\*\*$", line.strip())
-            if m:
+            if re.match(r"^\*\*(?:표|그림)\s+\d+-\d+\.\s*.+\*\*$", line.strip()):
                 caption_text = line.strip().strip("*")
                 self._add_para(doc, caption_text, "Caption")
                 i += 1
@@ -147,8 +134,8 @@ class DocxExporter:
             # List items
             if re.match(r"^[-*]\s+", line):
                 text = re.sub(r"^[-*]\s+", "", line)
-                para = self._add_para(doc, "", "List Paragraph")
-                self._add_formatted_runs(para, text, footnotes)
+                para = self._add_para(doc, None, "List Paragraph")
+                self._add_formatted_runs(para, text, footnotes, doc)
                 i += 1
                 continue
 
@@ -156,40 +143,31 @@ class DocxExporter:
             m = re.match(r"^(\d+)[.)]\s+", line)
             if m:
                 text = line[m.end():]
-                para = self._add_para(doc, "", "List Paragraph")
-                self._add_formatted_runs(para, text, footnotes)
+                para = self._add_para(doc, None, "List Paragraph")
+                self._add_formatted_runs(para, text, footnotes, doc)
                 i += 1
                 continue
 
             # Normal paragraph
-            para = self._add_para(doc, "", "Normal")
-            self._add_formatted_runs(para, line, footnotes)
+            para = self._add_para(doc, None, "Normal")
+            self._add_formatted_runs(para, line, footnotes, doc)
             i += 1
 
     def _render_heading(self, doc: Document, line: str) -> None:
-        """Render a heading line."""
         level = 0
         for ch in line:
             if ch == "#":
                 level += 1
             else:
                 break
-
         text = line[level:].strip()
 
-        if level == 1:
-            self._add_para(doc, text, "Heading 1")
-        elif level == 2:
-            self._add_para(doc, text, "Heading 2")
-        elif level == 3:
-            self._add_para(doc, text, "Heading 3")
-        elif level == 4:
-            self._add_para(doc, text, "Heading 4")
-        elif level >= 5:
-            self._add_para(doc, text, "소소제목")
+        style_map = {1: "Heading 1", 2: "Heading 2", 3: "Heading 3", 4: "Heading 4"}
+        style = style_map.get(level, "소소제목")
+        self._add_para(doc, text, style)
 
-    def _render_fenced_div(self, doc: Document, lines: list[str], start: int, div_type: str, title: str) -> int:
-        """Render ::: box/note/tip ... ::: blocks."""
+    def _render_fenced_div(self, doc: Document, lines: list[str], start: int,
+                           div_type: str, title: str, footnotes: dict) -> int:
         i = start + 1
         content_lines = []
 
@@ -203,23 +181,22 @@ class DocxExporter:
         title = title.strip()
 
         if div_type == "box":
-            # Box: title in 박스 제목, content in 박스_끝
             if title:
                 self._add_para(doc, title, "박스 제목")
-            content = "\n".join(line for line in content_lines if line.strip())
             for para_text in self._split_paragraphs(content_lines):
-                self._add_para(doc, para_text, "박스_끝")
+                para = self._add_para(doc, None, "박스_끝")
+                self._add_formatted_runs(para, para_text, footnotes, doc)
         else:
-            # Note/Tip: all in 노트 style
+            # Note/Tip
             if title:
                 self._add_para(doc, title, "노트")
             for para_text in self._split_paragraphs(content_lines):
-                self._add_para(doc, para_text, "노트")
+                para = self._add_para(doc, None, "노트")
+                self._add_formatted_runs(para, para_text, footnotes, doc)
 
         return i
 
     def _render_code_block(self, doc: Document, lines: list[str], start: int) -> int:
-        """Render ``` code blocks."""
         i = start + 1
         code_lines = []
 
@@ -230,21 +207,17 @@ class DocxExporter:
             code_lines.append(lines[i])
             i += 1
 
-        # Use _코드 style if available, fall back to Normal
-        style_name = "_코드"
         for code_line in code_lines:
-            self._add_para(doc, code_line, style_name)
+            self._add_para(doc, code_line, "_코드")
 
         return i
 
     def _render_table(self, doc: Document, lines: list[str], start: int) -> int:
-        """Render a Markdown table."""
         i = start
         rows_data = []
 
         while i < len(lines) and "|" in lines[i]:
             row_text = lines[i].strip()
-            # Skip separator row
             if re.match(r"^\|[-\s|:]+\|$", row_text):
                 i += 1
                 continue
@@ -262,14 +235,12 @@ class DocxExporter:
         for ri, row in enumerate(rows_data):
             for ci, cell_text in enumerate(row):
                 if ci < num_cols:
-                    # Strip bold markers from cell text
-                    cell_text = cell_text.strip("*")
+                    cell_text = self._strip_md_formatting(cell_text)
                     table.rows[ri].cells[ci].text = cell_text
 
         return i
 
     def _split_paragraphs(self, lines: list[str]) -> list[str]:
-        """Split lines into paragraph groups (separated by blank lines)."""
         paragraphs = []
         current = []
         for line in lines:
@@ -283,53 +254,140 @@ class DocxExporter:
             paragraphs.append(" ".join(current))
         return paragraphs
 
-    def _add_para(self, doc: Document, text: str, style_name: str) -> "Paragraph":
-        """Add a paragraph with the given style. Falls back to Normal if style not found."""
+    def _strip_md_formatting(self, text: str) -> str:
+        """Remove all markdown inline formatting markers from text."""
+        text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)  # **bold**
+        text = re.sub(r"\*(.+?)\*", r"\1", text)       # *italic*
+        text = re.sub(r"`([^`]+)`", r"\1", text)       # `code`
+        text = re.sub(r"\[\^(\w+)\]", "", text)         # [^footnote]
+        return text
+
+    def _add_para(self, doc: Document, text: str | None, style_name: str):
+        """Add a paragraph with the given style.
+
+        If text is None, returns an empty paragraph for caller to fill with runs.
+        If text is a string, adds it as a plain run (for headings, captions, code).
+        """
         try:
             para = doc.add_paragraph(style=style_name)
         except KeyError:
             para = doc.add_paragraph()
-        if text:
+        if text is not None:
             para.add_run(text)
         return para
 
-    def _add_formatted_runs(self, para, text: str, footnotes: dict[str, str]) -> None:
-        """Parse inline formatting and add runs with appropriate styles."""
-        # Process inline elements: **bold**, `code`, [^footnote], 영문(English)
+    def _add_formatted_runs(self, para, text: str, footnotes: dict[str, str], doc: Document) -> None:
+        """Parse inline Markdown formatting and add Word runs with proper styles."""
+        # Match: **bold**, `code`, [^footnote]
         pattern = re.compile(
             r"(\*\*(.+?)\*\*)"       # bold
+            r"|(\*(.+?)\*)"           # italic
             r"|(`([^`]+)`)"           # inline code
             r"|(\[\^(\w+)\])"         # footnote reference
         )
 
         pos = 0
         for m in pattern.finditer(text):
-            # Add text before match
+            # Add plain text before this match
             if m.start() > pos:
                 para.add_run(text[pos:m.start()])
 
-            if m.group(2):  # bold
+            if m.group(2):  # **bold**
                 run = para.add_run(m.group(2))
                 run.bold = True
-            elif m.group(4):  # inline code
+            elif m.group(4):  # *italic*
                 run = para.add_run(m.group(4))
+                run.italic = True
+            elif m.group(6):  # `inline code`
+                run = para.add_run(m.group(6))
                 try:
-                    run.style = para.part.document.styles["_코드_본문"]
+                    run.style = doc.styles["_코드_본문"]
                 except KeyError:
                     run.font.name = "Consolas"
-            elif m.group(6):  # footnote ref
-                ref_id = m.group(6)
+            elif m.group(8):  # [^footnote_id]
+                ref_id = m.group(8)
                 fn_text = footnotes.get(ref_id, ref_id)
-                # Add as superscript reference for now
-                run = para.add_run(f"[{ref_id}]")
-                run.font.superscript = True
-                run.font.size = None  # inherit
+                self._add_footnote(para, fn_text, doc)
 
             pos = m.end()
 
-        # Add remaining text
+        # Add remaining text after last match
         if pos < len(text):
             para.add_run(text[pos:])
+
+    def _init_footnotes(self, doc: Document) -> None:
+        """Load the footnotes XML part from the document."""
+        for rel in doc.part.rels.values():
+            if "footnote" in str(rel.reltype).lower():
+                self._footnotes_part = rel.target_part
+                self._footnotes_xml = etree.fromstring(self._footnotes_part.blob)
+                # Find max existing footnote ID to avoid collisions
+                for fn in self._footnotes_xml:
+                    fn_id = fn.get(qn("w:id"))
+                    if fn_id and fn_id.lstrip("-").isdigit():
+                        self._footnote_id = max(self._footnote_id, int(fn_id) + 1)
+                return
+        self._footnotes_xml = None
+        self._footnotes_part = None
+
+    def _save_footnotes(self) -> None:
+        """Write modified footnotes XML back to the part."""
+        if self._footnotes_part is not None and self._footnotes_xml is not None:
+            self._footnotes_part._blob = etree.tostring(self._footnotes_xml, xml_declaration=True, encoding="UTF-8", standalone=True)
+
+    def _add_footnote(self, paragraph, footnote_text: str, doc: Document) -> None:
+        """Add a real Word footnote to the paragraph."""
+        if self._footnotes_xml is None:
+            # No footnotes part — fall back to superscript
+            run = paragraph.add_run("*")
+            run.font.superscript = True
+            return
+
+        nsmap = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+        fn_id = str(self._footnote_id)
+        self._footnote_id += 1
+
+        # Build footnote element
+        footnote_el = etree.SubElement(self._footnotes_xml, qn("w:footnote"))
+        footnote_el.set(qn("w:id"), fn_id)
+
+        fn_para = etree.SubElement(footnote_el, qn("w:p"))
+
+        # Paragraph style: footnote text
+        fn_ppr = etree.SubElement(fn_para, qn("w:pPr"))
+        fn_pstyle = etree.SubElement(fn_ppr, qn("w:pStyle"))
+        fn_pstyle.set(qn("w:val"), "footnote text")
+
+        # Footnote ref mark (auto-number inside the footnote)
+        fn_ref_run = etree.SubElement(fn_para, qn("w:r"))
+        fn_ref_rpr = etree.SubElement(fn_ref_run, qn("w:rPr"))
+        fn_ref_rstyle = etree.SubElement(fn_ref_rpr, qn("w:rStyle"))
+        fn_ref_rstyle.set(qn("w:val"), "footnote reference")
+        etree.SubElement(fn_ref_run, qn("w:footnoteRef"))
+
+        # Space
+        space_run = etree.SubElement(fn_para, qn("w:r"))
+        space_t = etree.SubElement(space_run, qn("w:t"))
+        space_t.set(qn("xml:space"), "preserve")
+        space_t.text = " "
+
+        # Footnote body text
+        text_run = etree.SubElement(fn_para, qn("w:r"))
+        text_t = etree.SubElement(text_run, qn("w:t"))
+        text_t.set(qn("xml:space"), "preserve")
+        text_t.text = footnote_text
+
+        # Insert reference mark in the main document paragraph
+        ref_run = OxmlElement("w:r")
+        ref_rpr = OxmlElement("w:rPr")
+        ref_rstyle = OxmlElement("w:rStyle")
+        ref_rstyle.set(qn("w:val"), "footnote reference")
+        ref_rpr.append(ref_rstyle)
+        ref_run.append(ref_rpr)
+        fn_ref = OxmlElement("w:footnoteReference")
+        fn_ref.set(qn("w:id"), fn_id)
+        ref_run.append(fn_ref)
+        paragraph._element.append(ref_run)
 
 
 def export_chapter(
@@ -338,17 +396,6 @@ def export_chapter(
     template_path: Path | str | None = None,
     output_dir: Path | str | None = None,
 ) -> Path:
-    """Export the latest draft of a chapter to .docx.
-
-    Args:
-        project_root: Project root directory.
-        chapter_id: Chapter ID (e.g., "ch01").
-        template_path: Path to the publisher template .docx.
-        output_dir: Output directory. Defaults to project_root/export/.
-
-    Returns:
-        Path to the created .docx file.
-    """
     chapter_dir = project_root / f"manuscript/{chapter_id}"
     drafts = sorted(chapter_dir.glob("draft_v*.md"))
     if not drafts:
