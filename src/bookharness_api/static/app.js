@@ -143,7 +143,7 @@ function renderChapterTable() {
         <td>${badge(c.status)}</td>
         <td><div style="display:flex;align-items:center;gap:8px"><span class="subtle" style="font-size:11px;white-space:nowrap">${STAGE_LABELS[c.current_stage] || c.current_stage}</span><div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${pct}%"></div></div><span class="subtle" style="font-size:11px">${pct}%</span></div></td>
         <td><span class="subtle">${c.latest_draft || "-"}</span></td>
-        <td><button class="btn btn-sm" data-open="${c.chapter_id}">Open</button></td>
+        <td><div class="btn-group"><button class="btn btn-sm" data-open="${c.chapter_id}">Open</button>${c.latest_draft ? `<button class="btn btn-sm btn-ghost" data-export="${c.chapter_id}" title="Export DOCX">&#x1F4E5;</button>` : ""}</div></td>
       </tr>`;
     }).join("")
     : `<tr><td colspan="5" class="empty">No chapters match</td></tr>`;
@@ -154,6 +154,28 @@ function renderChapterTable() {
 function bindOpenButtons() {
   document.querySelectorAll("[data-open]").forEach(b => {
     b.onclick = () => openChapter(b.dataset.open);
+  });
+  document.querySelectorAll("[data-export]").forEach(b => {
+    b.onclick = async (e) => {
+      e.stopPropagation();
+      const chId = b.dataset.export;
+      try {
+        notify("Exporting to Word...");
+        const res = await fetch(`/api/chapters/${chId}/export/docx`);
+        if (!res.ok) throw new Error(await res.text());
+        const blob = await res.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        const disposition = res.headers.get("content-disposition") || "";
+        const match = disposition.match(/filename="?(.+?)"?$/);
+        a.download = match ? match[1] : `${chId}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+        notify("Downloaded!");
+      } catch (err) { notify(`Export failed: ${err.message}`, true); }
+    };
   });
 }
 
@@ -234,6 +256,27 @@ function renderActions(chapter) {
       } catch (e) { showLoading(false); notify(`Failed: ${e.message}`, true); }
     };
   });
+
+  // Export DOCX button
+  $("export-docx-btn").onclick = async () => {
+    try {
+      notify("Exporting to Word...");
+      const url = `/api/chapters/${S.chapterId}/export/docx`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(await res.text());
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      const disposition = res.headers.get("content-disposition") || "";
+      const match = disposition.match(/filename="?(.+?)"?$/);
+      a.download = match ? match[1] : `${S.chapterId}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+      notify("Downloaded!");
+    } catch (e) { notify(`Export failed: ${e.message}`, true); }
+  };
 
   // Run MVP button
   $("run-mvp-btn").onclick = async () => {

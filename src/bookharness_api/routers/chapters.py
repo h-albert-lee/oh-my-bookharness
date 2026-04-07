@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
+from fastapi.responses import FileResponse
 
 from bookharness_api.schemas import ApprovalRequest, ChapterCreateRequest, RunMVPRequest, RunStageRequest
 
@@ -45,4 +46,23 @@ def approve(chapter_id: str, payload: ApprovalRequest, request: Request):
         payload.result,
         payload.notes,
         payload.actor,
+    )
+
+
+@router.get("/{chapter_id}/export/docx")
+def export_docx(chapter_id: str, request: Request):
+    """Export the latest draft of a chapter as a .docx file."""
+    from bookharness.export.docx_exporter import export_chapter
+
+    root = request.app.state.project_root
+    # Look for publisher template
+    template_path = root / "1장_피드백 진행.docx"
+    if not template_path.exists():
+        template_path = None
+
+    output = export_chapter(root, chapter_id, template_path=template_path)
+    return FileResponse(
+        path=str(output),
+        filename=output.name,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
