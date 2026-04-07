@@ -1,0 +1,333 @@
+chapter_id: ch06
+title: AI 에이전트는 단순 프로그램이 아니라 시스템이다
+core_sources:
+- source_id: web_01
+  title: LLM Powered Autonomous Agents
+  authors:
+  - Lilian Weng
+  year: 2023
+  type: blog_post
+  url: https://lilianweng.github.io/posts/2023-06-23-agent/
+  quality_score: 5
+  relevance: 'LLM 기반 에이전트를 Planning·Memory·Tool Use 세 컴포넌트로 분류한 사실상의 레퍼런스 문서. ch06의
+    ''에이전트 = 상호작용하는 컴포넌트들의 집합''이라는 핵심 프레임을 독자에게 소개할 때 직접 인용 가능. 단기·장기 메모리 구분, 도구 호출의
+    위치, 계획 모듈의 역할을 명확한 언어로 정의해 ch02·ch03·ch04와의 연결 고리를 동시에 제공한다.
+
+    '
+- source_id: web_02
+  title: Building Effective Agents
+  authors:
+  - Erik Schluntz
+  - Barry Zhang
+  year: 2024
+  type: blog_post
+  url: https://www.anthropic.com/research/building-effective-agents
+  quality_score: 5
+  relevance: 'Anthropic의 실전 경험에서 도출한 설계 원칙. 워크플로우(predefined code path)와 에이전트(LLM이
+    동적으로 흐름을 결정)를 아키텍처 수준에서 구분하며, ''단순하고 조합 가능한 패턴이 더 성공적''이라는 주장이 ch06의 컴포넌트 교체·확장
+    설계 원칙과 직결된다. ''복잡성은 입증된 필요성이 있을 때만 추가하라''는 처방은 피해야 할 오해(시스템=복잡한 것) 반박에도 활용 가능.
+
+    '
+- source_id: web_03
+  title: 'ReAct: Synergizing Reasoning and Acting in Language Models'
+  authors:
+  - Shunyu Yao
+  - Jeffrey Zhao
+  - Dian Yu
+  - Nan Du
+  - Izhak Shafran
+  - Karthik Narasimhan
+  - Yuan Cao
+  year: 2023
+  type: academic_paper
+  url: https://arxiv.org/abs/2210.03629
+  quality_score: 5
+  relevance: 'Thought→Action→Observation 사이클을 가장 명확하게 정형화한 논문. ''단순 모델 호출처럼 보이는 에이전트가
+    내부적으로 어떤 반복 흐름을 갖는지'' 구조적으로 보여주는 핵심 사례. 외부 도구와의 상호작용이 컴포넌트 간 의존성을 만드는 방식을 실험적으로
+    입증해 ch03(도구)·ch06 연결에 활용 가능.
+
+    '
+- source_id: web_04
+  title: Why Do Multi-Agent LLM Systems Fail? (MAST)
+  authors:
+  - Mert Cemri
+  - Melissa Z. Pan
+  - Shuyi Yang
+  - Lakshya A. Agrawal
+  - Bhavya Chopra
+  - Rishabh Tiwari
+  - Kurt Keutzer
+  - Aditya Parameswaran
+  - Dan Klein
+  - Kannan Ramchandran
+  - Matei Zaharia
+  - Joseph E. Gonzalez
+  - Ion Stoica
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2503.13657
+  quality_score: 5
+  relevance: '7개 프레임워크·1,600개 이상 실행 트레이스를 분석해 14가지 실패 모드를 시스템 설계 이슈·에이전트 간 불일치·태스크
+    검증 세 범주로 분류한 MAST 분류체계. ch06의 핵심 질문("에이전트가 잘못된 결과를 냈을 때 원인은 모델인가 시스템인가")에 대한 경험적
+    답변을 제공. 실패 경로 설계 절의 핵심 레퍼런스.
+
+    '
+- source_id: web_05
+  title: 'Chapter 3: Architectures for Building Agentic AI (Reliable and Responsible
+    Generative AI, arxiv 2512.09458)'
+  authors:
+  - Janet (Jing) Lin
+  - Liangwei Zhang
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/html/2512.09458v1
+  quality_score: 5
+  relevance: '''모델이 제안하고, 아키텍처가 결정한다(models propose, architectures dispose)''는 명제가
+    ch06 전체 논증의 구조적 기둥으로 직접 사용 가능. 컴포넌트화를 통한 폴트 격리, 스키마 기반 검증기, 인터페이스 계약 정의 등 ch06의
+    시스템 경계·컴포넌트 의존·교체 가능성 개념에 정확히 대응하는 처방을 제공.
+
+    '
+- source_id: web_06
+  title: Harness Engineering for Coding Agent Users
+  authors:
+  - Birgitta Böckeler
+  year: 2026
+  type: blog_post
+  url: https://martinfowler.com/articles/harness-engineering.html
+  quality_score: 4
+  relevance: '''Agent = Model + Harness'' 공식을 제시하며 하네스를 guides(피드포워드)와 sensors(피드백)
+    두 축으로 구분. ch06 concept_dictionary의 harness 정의와 직접 연결되며, 평가 하네스가 시스템 외부에 놓여야 하는
+    이유를 설계 구조로 설명하는 가장 명료한 1차 출처. Computational vs. Inferential 제어 구분은 ch05(평가)와의
+    연결 고리도 제공.
+
+    '
+- source_id: web_07
+  title: Towards a Science of AI Agent Reliability
+  authors:
+  - 복수 저자
+  year: 2026
+  type: academic_paper
+  url: https://arxiv.org/html/2602.16666v1
+  quality_score: 4
+  relevance: '내부 평가를 통과한 에이전트가 실제 배포에서 심각한 실패를 일으킨 실사례(Replit 데이터베이스 삭제, Operator
+    무단 구매 등)를 분석. ''단순해 보이는 에이전트가 왜 시스템 수준 설계가 필요한가''를 독자에게 각인시키는 도입부 사례로 활용 가능. 모델
+    품질과 시스템 신뢰성이 별개임을 실증적으로 보여줌.
+
+    '
+- source_id: web_08
+  title: Where LLM Agents Fail and How They Can Learn From Failures
+  authors:
+  - Kunlun Zhu
+  - et al.
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2509.25370
+  quality_score: 4
+  relevance: '오류 전파(error propagation)가 에이전트 신뢰성의 핵심 병목임을 실증. memory·reflection·planning·action·system-level
+    5개 모듈에 걸친 계층적 실패 분류체계(AgentErrorTaxonomy) 제시. ch06의 실패 경로 전파 메커니즘을 설명하는 절에서 직접
+    인용 가능.
+
+    '
+supporting_sources:
+- source_id: web_09
+  title: A Survey on Large Language Model based Autonomous Agents
+  authors:
+  - Lei Wang
+  - Chen Ma
+  - Xueyang Feng
+  - Zeyu Zhang
+  - Hao Yang
+  - Jingsen Zhang
+  - Zhiyuan Chen
+  - Jiakai Tang
+  - Xu Chen
+  - Yankai Lin
+  - Wayne Xin Zhao
+  - Zhewei Wei
+  - Ji-Rong Wen
+  year: 2024
+  type: academic_paper
+  url: https://arxiv.org/abs/2308.11432
+  quality_score: 4
+  relevance: 'profile·memory·planning·action 4개 모듈로 이루어진 통합 에이전트 프레임워크를 제안한 첫 공식 서베이.
+    ch06에서 에이전트를 시스템으로 분해하는 공식 어휘와 분류 체계의 학술적 근거로 활용 가능.
+
+    '
+- source_id: web_10
+  title: 'MemGPT: Towards LLMs as Operating Systems'
+  authors:
+  - Charles Packer
+  - Vivian Fang
+  - Shishir G. Patil
+  - Kevin Lin
+  - Sarah Wooders
+  - Joseph E. Gonzalez
+  year: 2023
+  type: academic_paper
+  url: https://arxiv.org/abs/2310.08560
+  quality_score: 4
+  relevance: 'OS의 2계층 메모리(RAM/디스크) 비유로 LLM 컨텍스트 창 제약을 시스템 설계 결정으로 전환하는 사례. ch04(메모리)와
+    ch06의 연결 지점에서 메모리를 시스템 내 상태 관리 컴포넌트로 위치 지정하는 구체적 구현 사례.
+
+    '
+- source_id: web_11
+  title: 'Generative Agents: Interactive Simulacra of Human Behavior'
+  authors:
+  - Joon Sung Park
+  - Joseph C. O'Brien
+  - Carrie J. Cai
+  - Meredith Ringel Morris
+  - Percy Liang
+  - Michael S. Bernstein
+  year: 2023
+  type: academic_paper
+  url: https://arxiv.org/abs/2304.03442
+  quality_score: 4
+  relevance: '관찰·계획·반성 컴포넌트 제거 시 행동 품질이 어떻게 저하되는지 ablation으로 검증. ''겉보기엔 단순해 보이는 에이전트가
+    내부적으로 어떤 컴포넌트 상호작용을 갖는지'' 설명하는 사례이자 컴포넌트 의존 관계를 실험적으로 보여주는 자료.
+
+    '
+- source_id: web_12
+  title: 'MetaGPT: Meta Programming for A Multi-Agent Collaborative Framework'
+  authors:
+  - Sirui Hong
+  - Mingchen Zhuge
+  - Jiaqi Chen
+  - Xiawu Zheng
+  - Yuheng Cheng
+  - Ceyao Zhang
+  - Jinlin Wang
+  - Zili Wang
+  - Steven Ka Shing Yau
+  - Zijuan Lin
+  - Liangwei Zhou
+  - Chenyu Ran
+  - Lingfeng Xiao
+  - Chenglin Wu
+  - Jürgen Schmidhuber
+  year: 2023
+  type: academic_paper
+  url: https://arxiv.org/abs/2308.00352
+  quality_score: 4
+  relevance: 'LLM을 단순 연쇄할 때 발생하는 cascading hallucination 문제를 SOP와 역할 분리로 해결하는 구체적
+    사례. ''컴포넌트 간 의존과 실패 경로'' 절에서 ''단순 연결이 왜 위험한가''를 설명하는 대표 사례로 활용 가능.
+
+    '
+- source_id: web_13
+  title: 'The Landscape of Emerging AI Agent Architectures for Reasoning, Planning,
+    and Tool Calling: A Survey'
+  authors:
+  - Tula Masterman
+  - Sandi Besen
+  - Mason Sawtell
+  - Alex Chao
+  year: 2024
+  type: academic_paper
+  url: https://arxiv.org/abs/2404.11584
+  quality_score: 4
+  relevance: '단일 에이전트와 멀티 에이전트 아키텍처를 체계적으로 비교하며 설계 선택의 핵심 분기점을 정리. ch06 말미의 ''시스템
+    내 에이전트가 복수일 때'' 개방형 연결 절에서 후속 장 방향을 암시하는 자료로 활용 가능.
+
+    '
+- source_id: web_14
+  title: 'AI Agent Systems: Architectures, Applications, and Evaluation'
+  authors:
+  - Bin Xu
+  year: 2026
+  type: academic_paper
+  url: https://arxiv.org/abs/2601.01743
+  quality_score: 4
+  relevance: '에이전트를 정책 코어·메모리·플래너·툴 라우터·평가자 컴포넌트로 분해하는 통합 분류 체계 제시. 장기 실행 에러 누적과 비결정론적
+    출력이 왜 시스템 수준 설계를 필요로 하는지 논증. 자율성 대 통제 가능성 트레이드오프 논의는 설계 판단 추적 어조와 잘 맞음.
+
+    '
+- source_id: web_15
+  title: 'Agentic AI Frameworks: Architectures, Protocols, and Design Challenges'
+  authors:
+  - 복수 저자
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/html/2508.10146v1
+  quality_score: 3
+  relevance: 'CrewAI·LangGraph·AutoGen·Semantic Kernel 등 주요 프레임워크의 아키텍처 원칙과 통신 프로토콜(MCP,
+    A2A)을 비교. 에이전트 로직과 도구 호출의 강결합이 취약한 워크플로우를 만든다는 관찰이 ch06의 컴포넌트 분리 원칙을 뒷받침하는 배경
+    자료로 유용.
+
+    '
+- source_id: web_16
+  title: AI Agent Observability - Evolving Standards and Best Practices
+  authors:
+  - OpenTelemetry Community
+  year: 2025
+  type: documentation
+  url: https://opentelemetry.io/blog/2025/ai-agent-observability/
+  quality_score: 4
+  relevance: 'OpenTelemetry의 AI 에이전트 observability 표준화 현황. GenAI Semantic Convention
+    구조(traces, metrics, events)와 계측 전략을 다룸. ch06의 관찰 가능성(observability) 개념을 외부 시스템
+    설계의 일부로 다루는 절의 표준 참조 자료. 프레임워크별 계측 접근법 비교도 포함.
+
+    '
+- source_id: web_17
+  title: 'LLM Readiness Harness: Evaluation, Observability, and CI Gates for LLM/RAG
+    Applications'
+  authors:
+  - Alexandre Cristovão Maiorano
+  year: 2025
+  type: academic_paper
+  url: https://arxiv.org/abs/2603.27355
+  quality_score: 3
+  relevance: '평가 harness를 ''배포 결정 워크플로''로 전환하는 시스템 설계 사례. OpenTelemetry 기반 observability,
+    CI 품질 게이트, 자동화 벤치마크를 하나의 API 계약 아래 묶는 방식. ch06의 평가 하네스가 시스템 외부에 놓여야 하는 이유를 설계
+    구조로 뒷받침하는 구체적 구현 사례.
+
+    '
+- source_id: web_18
+  title: 'Agentic Architecture: Designing AI Agents for Enterprise Systems'
+  authors:
+  - Algolia Engineering
+  year: 2026
+  type: blog_post
+  url: https://www.algolia.com/blog/ai/agentic-architecture
+  quality_score: 3
+  relevance: '''에이전트 인터페이스를 API처럼 스키마·버전·계약 테스트로 관리해야 한다''는 실천 처방 제공. 암묵적 계약(프롬프트
+    안에 숨겨진 인터페이스 기대)이 어떻게 시스템 취약성을 만드는지 설명. ch06의 컴포넌트 교체 가능성 설계 기준 절에 실무 어휘를 제공하는
+    보조 자료.
+
+    '
+- source_id: web_19
+  title: Agent System Design Patterns (Databricks Documentation)
+  authors:
+  - Databricks
+  year: 2025
+  type: documentation
+  url: https://docs.databricks.com/aws/en/generative-ai/guide/agent-system-design-patterns
+  quality_score: 3
+  relevance: '단순 LLM 호출부터 멀티에이전트까지 설계 패턴 스펙트럼을 단계별로 설명. ch06에서 ''단순한 에이전트도 시스템이다''를
+    보여주는 단계별 진화 경로 설명에 활용 가능. 단순한 것에서 시작해 필요할 때만 복잡성을 추가하라는 원칙이 ch06의 피해야 할 오해 반박과
+    일치.
+
+    '
+- source_id: web_20
+  title: AI Agent Orchestration Patterns (Microsoft Azure Architecture Center)
+  authors:
+  - Microsoft
+  year: 2026
+  type: documentation
+  url: https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/ai-agent-design-patterns
+  quality_score: 3
+  relevance: '멀티에이전트 시스템의 분산 시스템 특성(노드 장애, 네트워크 파티션, 연쇄 오류)과 이에 대응하는 타임아웃·재시도·서킷 브레이커
+    패턴을 정리. ch06 말미의 ''운영 환경에서 관찰 가능성 요구사항'' 개방형 연결 절에서 후속 장 방향을 암시하는 배경 자료로 활용 가능.
+
+    '
+- source_id: web_21
+  title: 'Characterizing Faults in Agentic AI: A Taxonomy of Types, Symptoms, and
+    Root Causes'
+  authors:
+  - Mehil B. Shah
+  - et al.
+  year: 2026
+  type: academic_paper
+  url: https://arxiv.org/abs/2603.06847
+  quality_score: 3
+  relevance: 40개 오픈소스 에이전트 저장소 13,602개 이슈를 분석한 대규모 실증 연구. 약한 에러 핸들링과 불충분한 로깅이 단순 구현
+    실수를 진단하기 어려운 장애로 증폭시킨다는 주장이 관찰 가능성 필요성의 경험적 근거로 활용 가능.

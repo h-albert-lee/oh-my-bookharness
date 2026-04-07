@@ -1,0 +1,36 @@
+# Technical Review: ch06
+
+## Score
+
+- technical_accuracy: **3/5**
+- source_grounding: **3/5**
+- clarity: **4/5**
+
+## Must Fix
+
+- 6.1.1의 컴포넌트 분해 설명에서 'Model 레이어'를 Planning·Memory·Tool Use와 동등한 4번째 레이어로 제시하고 있으나, source web_01(Lilian Weng)은 Planning·Memory·Tool Use 세 컴포넌트를 나열하며 모델 자체는 이 컴포넌트들을 구동하는 핵심 엔진으로 위치시킨다. 초안은 모델을 별도 레이어로 격상해 '네 개의 레이어'라고 서술하는데, 이는 출처의 분류 체계와 불일치한다. 표현을 'Planning·Memory·Tool Use 세 컴포넌트와, 이를 구동하는 모델' 구조로 수정하거나, 레이어 수 표현을 정확히 해야 한다.
+- 그림 6-1 다이어그램에서 Memory와 Tool Use가 양방향 화살표(◀───▶)로 연결되어 있으나, 본문 어디에도 이 둘 사이의 직접적 양방향 계약이 설명되지 않는다. 6.1.2의 루프 설명에서는 'Action → Observation → Memory' 단방향 흐름으로 서술한다. 다이어그램과 본문 서술이 불일치하므로 어느 쪽을 수정해야 한다.
+- 6.2절 표 6-1이 '| Memory |' 행에서 완성되지 않은 채 초안이 끊겨 있다. 독자에게 불완전한 기술 정보를 노출하는 것은 기술서 품질 기준에서 허용 불가하다. 반드시 표를 완성하거나 해당 절을 제거해야 한다.
+- [분량 초과] 목표 분량의 150%를 초과합니다. 30390자 (목표: 20000자 = 20쪽, 허용: 14000~30000자)
+
+## Should Fix
+
+- 6.1.1에서 'Tool Use 레이어'의 예외 처리 역할로 '파싱 레이어'를 별도 언급하고 있다(단일 Q&A 에이전트 예시). 그러나 파싱 레이어는 web_01의 Tool Use 정의에 명시적으로 포함되지 않는다. 출처에 없는 하위 레이어 개념을 명명 없이 삽입하면 독자가 혼동할 수 있으므로, '모델 출력 파싱'이 Tool Use 레이어의 일부인지 별도 처리인지 출처 기반으로 명확히 해야 한다.
+- 6.1.2에서 ReAct 사이클의 Thought→Action→Observation을 컴포넌트 레이어에 매핑할 때, Thought를 'Planning 레이어와 Model 레이어가 함께 작동하는 단계'로 서술한다. web_03(Yao et al.)의 ReAct 원논문은 Thought를 모델의 언어적 추론 단계로 정의하며, 별도 Planning 컴포넌트를 Thought에 결합하는 매핑은 원논문에 없는 해석이다. 이를 저자 해석임을 명시하거나 web_01과 web_03을 구분해 인용해야 한다.
+- 'models propose, architectures dispose'(web_05, Lin & Zhang)는 6.2.1에서 핵심 명제로 인용되는데, 이 논문(arXiv:2512.09458)은 source pack notes에서 핵심 출처로 확인되지만 초안 본문의 각주(^web_05)가 6.2절에만 등장하고 해당 논문의 정식 서지 정보(저자명·연도·제목)가 다른 각주들과 달리 표기되지 않았다. 일관된 각주 형식으로 보완해야 한다.
+- 6.1.1 노트 박스의 표에서 '평가 하네스(harness)'를 '시스템 외부(harness)'로 분류하고 있다. concept_dictionary에서 harness는 '반복 가능하게 실행과 평가를 수행하는 외부 구조'로 정의된다. 표 내 레이어 컬럼 명칭이 '해당 컴포넌트 레이어'인데 harness는 레이어가 아니므로, 표 구조 자체가 분류 오류를 내포한다. harness를 표 외부 별도 설명으로 분리하거나 컬럼명을 조정해야 한다.
+
+## Nice to Have
+
+- 6.1.1에서 '컴포넌트를 나누는 기준은 복잡도가 아니다'라는 서술은 chapter brief의 피해야 할 오해('시스템 = 복잡한 것')를 직접 반박하는 좋은 표현이다. 그러나 이 원칙이 왜 '책임 범위'와 '교체 가능성' 두 기준으로 귀결되는지의 논리적 연결이 약하다. 한 문장 추가로 인과를 명시하면 독자 설득력이 높아진다.
+- 6.1.2의 워크플로우와 에이전트 구분 박스는 내용상 유익하나, chapter brief가 '아키텍처 강의'처럼 흘러가지 않도록 주의하라고 명시하고 있다. 이 박스는 구분 설명 자체에 집중하여 논증의 축인 '설계 판단'과의 연결이 약하다. 박스 말미에 이 구분이 실패 경로 설계에 어떤 판단 차이를 만드는지를 한 줄 추가하면 chapter brief 기준에 더 부합한다.
+- web_07(AI Agent Reliability, Replit 사례)은 source pack notes에서 도입부 또는 절 전환부 활용이 권장되었으나 현재 초안에 전혀 등장하지 않는다. 6.2절 실패 전파 논의 진입부에서 독자의 문제 인식 환기 용도로 간략히 활용하면 source pack의 의도와 더 잘 정렬된다.
+
+## Binary Checks
+
+- has_unsupported_claims: ✓ Pass
+- has_source_references: ✓ Pass
+- meets_minimum_length: ✓ Pass
+- within_maximum_length: ✗ Fail
+- all_citations_valid: ✓ Pass
+- page_check_detail: 30390자 (목표: 20000자 = 20쪽, 허용: 14000~30000자)
