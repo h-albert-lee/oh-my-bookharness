@@ -87,11 +87,15 @@ class DocxExporter:
                 if sid == source_id:
                     title = s.get("title", "")
                     url = s.get("url", "")
-                    authors = s.get("authors", "")
+                    raw_authors = s.get("authors", "")
                     year = s.get("year", "")
                     parts = []
-                    if authors:
-                        parts.append(str(authors))
+                    if raw_authors:
+                        if isinstance(raw_authors, list):
+                            authors = ", ".join(str(a) for a in raw_authors)
+                        else:
+                            authors = str(raw_authors)
+                        parts.append(authors)
                     if year:
                         parts.append(f"({year})")
                     if title:
@@ -105,19 +109,22 @@ class DocxExporter:
         i = 0
         footnotes: dict[str, str] = {}
 
-        # First pass: collect footnote definitions [^id]: text
+        # First pass: collect footnote definitions from markdown [^id]: text
+        md_footnotes: dict[str, str] = {}
         for line in lines:
             m = re.match(r"^\[\^(\w+)\]:\s*(.+)$", line)
             if m:
-                footnotes[m.group(1)] = m.group(2)
+                md_footnotes[m.group(1)] = m.group(2)
 
-        # Second pass: fill missing definitions from source bundle
+        # Build footnote map: prefer bundle citation over markdown description
         all_refs = set(re.findall(r"\[\^(\w+)\](?!:)", "\n".join(lines)))
         for ref_id in all_refs:
-            if ref_id not in footnotes:
-                citation = self._build_source_citation(ref_id)
-                if citation:
-                    footnotes[ref_id] = citation
+            # Try bundle first (has proper author/title/url)
+            citation = self._build_source_citation(ref_id)
+            if citation:
+                footnotes[ref_id] = citation
+            elif ref_id in md_footnotes:
+                footnotes[ref_id] = md_footnotes[ref_id]
 
         while i < len(lines):
             line = lines[i]
