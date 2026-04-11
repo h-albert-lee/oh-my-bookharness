@@ -34,11 +34,14 @@ from lxml import etree
 class DocxExporter:
     """Convert a Markdown draft to .docx using the publisher template."""
 
-    def __init__(self, template_path: Path | str | None = None) -> None:
+    def __init__(self, template_path: Path | str | None = None,
+                 source_bundle: dict | None = None) -> None:
         self.template_path = Path(template_path) if template_path else None
+        self._source_bundle = source_bundle or {}
         self._footnote_id = 1  # auto-increment footnote IDs
         self._footnotes_xml = None  # lxml element for footnotes part
         self._footnotes_part = None  # the OPC part object
+        self._created_footnotes: dict[str, str] = {}  # ref_id -> fn_id (dedup)
 
     def export(self, markdown_path: Path | str, output_path: Path | str | None = None) -> Path:
         markdown_path = Path(markdown_path)
@@ -56,6 +59,7 @@ class DocxExporter:
             doc = Document()
 
         self._footnote_id = 1
+        self._created_footnotes = {}
         self._init_footnotes(doc)
         lines = md_text.split("\n")
         self._render(doc, lines)
@@ -75,6 +79,28 @@ class DocxExporter:
             t = doc.tables[0]._element
             t.getparent().remove(t)
 
+    def _build_source_citation(self, source_id: str) -> str | None:
+        """Build a citation string from the source bundle metadata."""
+        for key in ("core_sources", "supporting_sources"):
+            for s in self._source_bundle.get(key, []):
+                sid = s.get("source_id", "")
+                if sid == source_id:
+                    title = s.get("title", "")
+                    url = s.get("url", "")
+                    authors = s.get("authors", "")
+                    year = s.get("year", "")
+                    parts = []
+                    if authors:
+                        parts.append(str(authors))
+                    if year:
+                        parts.append(f"({year})")
+                    if title:
+                        parts.append(title)
+                    if url:
+                        parts.append(url)
+                    return ". ".join(parts) if parts else None
+        return None
+
     def _render(self, doc: Document, lines: list[str]) -> None:
         i = 0
         footnotes: dict[str, str] = {}
@@ -84,6 +110,14 @@ class DocxExporter:
             m = re.match(r"^\[\^(\w+)\]:\s*(.+)$", line)
             if m:
                 footnotes[m.group(1)] = m.group(2)
+
+        # Second pass: fill missing definitions from source bundle
+        all_refs = set(re.findall(r"\[\^(\w+)\](?!:)", "\n".join(lines)))
+        for ref_id in all_refs:
+            if ref_id not in footnotes:
+                citation = self._build_source_citation(ref_id)
+                if citation:
+                    footnotes[ref_id] = citation
 
         while i < len(lines):
             line = lines[i]
@@ -306,8 +340,17 @@ class DocxExporter:
                     run.font.name = "Consolas"
             elif m.group(8):  # [^footnote_id]
                 ref_id = m.group(8)
-                fn_text = footnotes.get(ref_id, ref_id)
-                self._add_footnote(para, fn_text, doc)
+                fn_text = footnotes.get(ref_id, "")
+                if not fn_text:
+                    # Skip refs with no definition at all
+                    continue
+                if ref_id in self._created_footnotes:
+                    # Reuse existing footnote number
+                    self._add_footnote_ref(para, self._created_footnotes[ref_id])
+                else:
+                    fn_id = self._add_footnote(para, fn_text, doc)
+                    if fn_id:
+                        self._created_footnotes[ref_id] = fn_id
 
             pos = m.end()
 
@@ -335,15 +378,26 @@ class DocxExporter:
         if self._footnotes_part is not None and self._footnotes_xml is not None:
             self._footnotes_part._blob = etree.tostring(self._footnotes_xml, xml_declaration=True, encoding="UTF-8", standalone=True)
 
-    def _add_footnote(self, paragraph, footnote_text: str, doc: Document) -> None:
-        """Add a real Word footnote to the paragraph."""
+    def _add_footnote_ref(self, paragraph, fn_id: str) -> None:
+        """Add a reference to an existing footnote (for duplicate refs)."""
+        ref_run = OxmlElement("w:r")
+        ref_rpr = OxmlElement("w:rPr")
+        ref_rstyle = OxmlElement("w:rStyle")
+        ref_rstyle.set(qn("w:val"), "footnote reference")
+        ref_rpr.append(ref_rstyle)
+        ref_run.append(ref_rpr)
+        fn_ref = OxmlElement("w:footnoteReference")
+        fn_ref.set(qn("w:id"), fn_id)
+        ref_run.append(fn_ref)
+        paragraph._element.append(ref_run)
+
+    def _add_footnote(self, paragraph, footnote_text: str, doc: Document) -> str | None:
+        """Add a real Word footnote to the paragraph. Returns fn_id."""
         if self._footnotes_xml is None:
-            # No footnotes part — fall back to superscript
             run = paragraph.add_run("*")
             run.font.superscript = True
-            return
+            return None
 
-        nsmap = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
         fn_id = str(self._footnote_id)
         self._footnote_id += 1
 
@@ -388,6 +442,16 @@ class DocxExporter:
         fn_ref.set(qn("w:id"), fn_id)
         ref_run.append(fn_ref)
         paragraph._element.append(ref_run)
+        return fn_id
+
+
+def _load_bundle(project_root: Path, chapter_id: str) -> dict:
+    """Load the source bundle for a chapter."""
+    bundle_path = project_root / f"sources/chapter_packs/{chapter_id}/bundle.yaml"
+    if bundle_path.exists():
+        import yaml
+        return yaml.safe_load(bundle_path.read_text(encoding="utf-8")) or {}
+    return {}
 
 
 def export_chapter(
@@ -410,5 +474,6 @@ def export_chapter(
 
     output_path = output_dir / f"{chapter_id}_{latest_draft.stem}.docx"
 
-    exporter = DocxExporter(template_path)
+    bundle = _load_bundle(project_root, chapter_id)
+    exporter = DocxExporter(template_path, source_bundle=bundle)
     return exporter.export(latest_draft, output_path)
