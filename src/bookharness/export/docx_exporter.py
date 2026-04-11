@@ -359,16 +359,21 @@ class DocxExporter:
             para.add_run(text[pos:])
 
     def _init_footnotes(self, doc: Document) -> None:
-        """Load the footnotes XML part from the document."""
+        """Load the footnotes XML part and clear template footnotes."""
         for rel in doc.part.rels.values():
             if "footnote" in str(rel.reltype).lower():
                 self._footnotes_part = rel.target_part
                 self._footnotes_xml = etree.fromstring(self._footnotes_part.blob)
-                # Find max existing footnote ID to avoid collisions
+                # Remove all footnotes except special ones (id -1 and 0)
+                to_remove = []
                 for fn in self._footnotes_xml:
-                    fn_id = fn.get(qn("w:id"))
-                    if fn_id and fn_id.lstrip("-").isdigit():
-                        self._footnote_id = max(self._footnote_id, int(fn_id) + 1)
+                    fn_id = fn.get(qn("w:id"), "")
+                    if fn_id.lstrip("-").isdigit() and int(fn_id) > 0:
+                        to_remove.append(fn)
+                for fn in to_remove:
+                    self._footnotes_xml.remove(fn)
+                # Start IDs from 1
+                self._footnote_id = 1
                 return
         self._footnotes_xml = None
         self._footnotes_part = None
